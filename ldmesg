@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# Read kernel messages in less, in color. Scroll to botton
+# of messages initially.
+dmesg -T --color=always | grep -v "audit" | less -R +G

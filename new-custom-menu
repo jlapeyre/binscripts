@@ -1,0 +1,143 @@
+#!/usr/bin/env perl
+use v5.16;
+use warnings;
+use autodie;
+use Text::ParseWords;
+use IPC::Open2;
+
+#our $TERM_EMULATOR = "alacritty";
+our $TERM_EMULATOR = "kitty";
+
+package Menu;
+use Class::Accessor 'antlers';
+Menu->follow_best_practice;
+has menu_cmd  => (is => 'ro', isa => 'Str');
+has menu_cmd_args => (is => 'ro');
+has menu_cmd_extra_args => (is => 'rw');
+has apps_filename => (is => 'ro', isa => 'Str');
+
+has apps  => (is => 'rw');
+has descriptions => (is => 'rw');
+has termqs => ( is => 'rw' );
+has chosen_menu_index => (isa => 'Int');
+
+sub new {
+    my $class = shift;
+    my $self = {};
+    bless $self, $class;
+    $self->{menu_cmd} = 'rofi' unless defined $self->{menu_cmd};
+    $self->{menu_cmd_args} = ['-dmenu', '-format' , 'i', '-p', 'Applications', '-lines', '30', '-i'];
+    return $self;
+}
+
+sub load_apps_list {
+    my $self = shift;
+    die "menu requires at least one argument" unless scalar(@ARGV) > 0;
+    my $filename = shift @ARGV;
+    $self->{apps_filename} = $filename;
+    $self->set_menu_cmd_extra_args([@ARGV]);
+    my ($apps, $descriptions, $termqs) = read_app_file($filename);
+    $self->set_apps($apps);
+    $self->set_descriptions($descriptions);
+    $self->set_termqs($termqs);
+    return $self;
+}
+
+sub read_app_file {
+    my ($file) = @_;
+    open my $fh, '<', $file;
+    my (@apps, @descriptions, @termqs);
+    while (my $line = <$fh>) {
+        chomp($line);
+        next if $line =~ /^\s*$/;
+        next if $line =~ /^\s*\#/; # first non-whitespace char is comment symbol
+        my ($app, $description, $termq) = Text::ParseWords::quotewords('\s+', 0, $line);
+        die "No app on line '$line'" unless defined $app;
+        $description = $app unless defined $description && $description ne '-';
+        if (defined $termq) {
+            $termq = 1 if $termq =~ /^(yes|true|term)$/n;
+            $termq = 0 if $termq =~ /^(no|false|noterm)$/n;
+            $termq = 2 if $termq =~/sleep/;
+        } else {
+            $termq = 0;
+        }
+        push @apps, $app;
+        push @descriptions, $description;
+        push @termqs, $termq;
+    }
+    return \@apps, \@descriptions, \@termqs,
+}
+
+sub show_menu {
+    my $self = shift;
+    my($chld_out, $chld_in);
+    my $pid = IPC::Open2::open2($chld_out, $chld_in,
+                                $self->get_menu_cmd, @{$self->get_menu_cmd_args}, @{$self->get_menu_cmd_extra_args});
+    for my $x (@{$self->{descriptions}}) {
+        print $chld_in $x, "\n";
+    }
+    close($chld_in);
+    my @output;
+    while (my $x = <$chld_out>) {
+        push @output, $x;
+    }
+    close($chld_out);
+    waitpid($pid, 0);
+    my $nlines = scalar(@output);
+    exit(0) if $nlines == 0;
+    die "Expecting one line of output from rofi, got $nlines." unless $nlines == 1;
+    my $i = $output[0];
+    die "rofi did not return a positive integer" unless $i =~ /^\d+$/;
+    $self->set_chosen_menu_index($i);
+    return $self;
+}
+
+sub run_command_from_menu {
+    my $self = shift;
+    my $i = $self->get_chosen_menu_index;
+    my ($app, $termq) = ($self->get_apps->[$i], $self->get_termqs->[$i]);
+    my $com;
+    $app =~ s/^"//;
+    $app =~ s/"$//;
+    if ($termq > 0) {
+        # my @program = ('termite', '-e', "'" . $app . "'");  # termite cannot do this. Other shells can.
+        # system(@program);
+        # Would like to not insert the path here by hand. But rather have it set correctly
+        # outside this script. But, that keeps breaking for some reason.
+        # I give up, and do the more fragile, but locally robust solution, which is to set
+        # the path here.
+#        my $com = 'export PATH=$PATH:/home/lapeyre/bin/; alacritty -e "' . $app . '"';
+        if ($termq == 1) {
+#            $com = 'export PATH=$PATH:/home/lapeyre/bin/; alacritty -e "' . $app . '"';
+            $com = 'export PATH=$PATH:/home/lapeyre/bin/; ' . $TERM_EMULATOR . ' -e ' . $app . '';
+        }
+        else {
+#            $com = 'export PATH=$PATH:/home/lapeyre/bin/; alacritty -e "' . $app . '"';
+#            $com = 'export PATH=$PATH:/home/lapeyre/bin/; alacritty -e ' . $app; #  . '"';
+#            $com = 'export PATH=$PATH:/home/lapeyre/bin/; alacritty -e "' . $app . '"';
+            $com = 'export PATH=$PATH:/home/lapeyre/bin/; ' .  $TERM_EMULATOR . ' -e bash -c "' .
+$app . '; sleep 10"';
+        }
+    }
+    else {
+        $com = $app;
+    }
+    system $com;
+    my $dtime = `date --rfc-3339=seconds`;
+    chomp($dtime);
+    open my $out, '>>', '/home/lapeyre/zlog';
+    print $out $dtime, " ", $com, "\n";
+    close $out;
+#    system "echo " . $com . " >> /home/lapeyre/zlog";
+}
+
+package main;
+
+sub __main__ {
+    my $menu = Menu->new();
+    $menu->load_apps_list;
+    $menu->show_menu;
+    $menu->run_command_from_menu;
+}
+
+__main__();

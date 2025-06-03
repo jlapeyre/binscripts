@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# An emacs installation that starts up fast. For editing
+# files quickly. E.g. git commit messages, mutt compose, etc.
+
+env HOME=$HOME/fastemacshome/ emacs $*

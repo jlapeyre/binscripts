@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+
+/home/lapeyre/bin/new-custom-menu /home/lapeyre/.config/i3/applications

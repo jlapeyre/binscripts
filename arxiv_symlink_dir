@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+
+import os
+import re
+import json
+import argparse
+import unicodedata
+import feedparser
+import shutil
+
+def extract_arxiv_id_from_filename(filename):
+    # Matches modern (2103.12345) or old (hep-th/9901001) style IDs
+    match = re.search(r'(\d{4}\.\d{4,5}|[a-z\-]+/\d{7})', filename)
+    return match.group(1) if match else None
+
+def extract_arxiv_id_from_text(filepath):
+    try:
+        import fitz  # PyMuPDF
+    except ImportError:
+        print("PyMuPDF (fitz) not installed, skipping text extraction fallback.")
+        return None
+    try:
+        doc = fitz.open(filepath)
+        text = doc[0].get_text()  # first page only
+        match = re.search(r'arXiv:\s*(\d{4}\.\d{4,5}|[a-z\-]+/\d{7})', text, re.IGNORECASE)
+        return match.group(1) if match else None
+    except Exception as e:
+        print(f"Failed to extract text from {filepath}: {e}")
+        return None
+
+def fetch_metadata(arxiv_id):
+    url = f'http://export.arxiv.org/api/query?id_list={arxiv_id}'
+    feed = feedparser.parse(url)
+    if feed.entries:
+        entry = feed.entries[0]
+        title = entry.title.strip().replace('\n', ' ')
+        authors = ', '.join(author.name for author in entry.authors)
+        published = entry.published.split('T')[0]
+        link = entry.id
+        return {
+            'title': title,
+            'authors': authors,
+            'published': published,
+            'link': link
+        }
+    return None
+
+def load_cache(path):
+    if os.path.exists(path):
+        with open(path, 'r') as f:
+            return json.load(f)
+    return {}
+
+def save_cache(cache, path):
+    with open(path, 'w') as f:
+        json.dump(cache, f, indent=2)
+
+def clean_filename(text):
+    # Normalize, remove bad chars, replace spaces with underscores
+    text = unicodedata.normalize("NFKD", text)
+    # keep letters, numbers, space, dash, underscore, parentheses, dot, comma
+    text = re.sub(r'[^\w\s\-\(\)\[\]\.,]', '', text)
+    text = re.sub(r'\s+', '_', text).strip('_')
+    return text[:100]  # limit length
+
+def symlink_name(meta):
+    # Format: Title_arXivID.pdf
+    safe_title = clean_filename(meta['title'])
+    arxiv_id = meta.get('arxiv_id', 'unknown')
+    return f"{safe_title}_{arxiv_id}.pdf"
+
+def relative_symlink(target_path, link_path):
+    # Create relative symlink from link_path pointing to target_path
+    rel_target = os.path.relpath(target_path, os.path.dirname(link_path))
+    os.symlink(rel_target, link_path)
+
+def main(source_dir, out_dir=None, refresh=False):
+    if out_dir is None:
+        out_dir = os.path.join(source_dir, 'arxiv_links')
+
+    if refresh and os.path.exists(out_dir):
+        print(f"Refreshing symlink directory: deleting {out_dir}")
+        shutil.rmtree(out_dir)
+
+    os.makedirs(out_dir, exist_ok=True)
+
+    cache_path = os.path.join(source_dir, 'arxiv_metadata.json')
+    cache = load_cache(cache_path)
+    updated_cache = False
+
+    skipped_files = []
+    failed_files = []
+
+    for filename in sorted(os.listdir(source_dir)):
+        if not filename.lower().endswith('.pdf'):
+            continue
+
+        filepath = os.path.join(source_dir, filename)
+        arxiv_id = extract_arxiv_id_from_filename(filename)
+
+        if not arxiv_id:
+            arxiv_id = extract_arxiv_id_from_text(filepath)
+            if arxiv_id:
+                print(f"Found arXiv ID in PDF text for {filename}: {arxiv_id}")
+
+        if not arxiv_id:
+            print(f"❌ Skipping (no arXiv ID found): {filename}")
+            skipped_files.append(filename)
+            continue
+
+        if arxiv_id in cache:
+            meta = cache[arxiv_id]
+        else:
+            print(f"🌐 Fetching metadata for {arxiv_id} ...")
+            meta = fetch_metadata(arxiv_id)
+            if not meta:
+                print(f"⚠️ Metadata fetch failed for {arxiv_id}, skipping {filename}")
+                failed_files.append(filename)
+                continue
+            meta['arxiv_id'] = arxiv_id
+            cache[arxiv_id] = meta
+            updated_cache = True
+
+        # Compose symlink name
+        link_name = symlink_name(meta)
+        link_path = os.path.join(out_dir, link_name)
+
+        if os.path.exists(link_path):
+            # Avoid overwriting existing symlink or file
+            if os.path.islink(link_path):
+                existing_target = os.readlink(link_path)
+                expected_target = os.path.relpath(filepath, out_dir)
+                if existing_target == expected_target:
+                    print(f"✅ Symlink already exists and correct: {link_name}")
+                    continue
+                else:
+                    print(f"⚠️ Symlink {link_name} points to {existing_target}, expected {expected_target}. Recreating.")
+                    os.unlink(link_path)
+            else:
+                print(f"⚠️ {link_name} exists and is not a symlink, skipping to avoid overwrite.")
+                skipped_files.append(filename)
+                continue
+
+        try:
+            relative_symlink(filepath, link_path)
+            print(f"🔗 Created symlink: {link_name} -> {filepath}")
+        except Exception as e:
+            print(f"❌ Failed to create symlink for {filename}: {e}")
+            failed_files.append(filename)
+
+    if updated_cache:
+        save_cache(cache, cache_path)
+        print(f"💾 Cache updated at {cache_path}")
+
+    print("\nSummary:")
+    print(f"Skipped files (no ID): {len(skipped_files)}")
+    for f in skipped_files:
+        print(f" - {f}")
+    print(f"Failed symlink creations: {len(failed_files)}")
+    for f in failed_files:
+        print(f" - {f}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Create a symlink directory of arXiv PDFs named Title_arXivID.pdf")
+    parser.add_argument('source_dir', help="Directory containing your arXiv PDFs")
+    parser.add_argument('--out-dir', help="Output symlink directory (default: source_dir/arxiv_links)")
+    parser.add_argument('--refresh', action='store_true', help="Clear and rebuild the symlink directory")
+    args = parser.parse_args()
+
+    main(args.source_dir, args.out_dir, args.refresh)

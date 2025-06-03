@@ -1,0 +1,13 @@
+#!/bin/bash
+
+soundfile=ephemeral-rift-stream.mp3
+
+if [ "$1" = "mountain" ]; then
+    soundfile=mountain_stream_ed.mp3
+fi
+
+# Another version of mpg123
+mpg123 --loop 1000 -g 60  $HOME/Sounds/$soundfile  &> /dev/null
+
+# One version of mpg123
+# mpg123 -l 0 -g 60  $HOME/admin/AMBIENT/$soundfile  &> /dev/null

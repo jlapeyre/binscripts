@@ -1,0 +1,3 @@
+#!/bin/bash
+
+watch -n 1 "df -Th | grep -v /dev/shm | grep -v /run | grep -v '% /dev' | grep -v /sys/fs/cgroup"

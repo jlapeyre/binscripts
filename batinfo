@@ -1,0 +1,55 @@
+#!/usr/bin/python
+
+# Print battery info to stdout
+
+def readf(fname):
+    with open(fname) as f:
+        return f.readlines()
+
+def ac(f):
+    return "/sys/class/power_supply/AC/" + f
+
+def bat(f):
+    return "/sys/class/power_supply/BAT0/" + f
+
+def pr_ac(f):
+    return("".join(readf(ac(f))).strip())
+
+def pr_bat(f):
+    return("".join(readf(bat(f))).strip())
+
+def pbat(f, label=None):
+    padn = 30
+    if label is None:
+        label = f
+    padsp = " " * (padn - len(label) )
+    print(padsp + label + ":", pr_bat(f))
+
+def pac(f, label=None):
+    padn = 30
+    if label is None:
+        label = f
+    label = "AC/" + label
+    padsp = " " * (padn - len(label) )
+    print(padsp + label + ":", pr_ac(f))
+
+print(" " * 25 + "BATTERY / AC")
+pbat("status")
+pac("online")
+pbat("capacity")
+pbat("capacity_level")
+pbat("charge_control_start_threshold")
+pbat("charge_control_end_threshold")
+pbat("power_now")
+pbat("energy_now")
+pbat("energy_full")
+pbat("energy_full_design")
+pbat("cycle_count")
+pbat("charge_behaviour")
+print("\n")
+pbat("technology")
+pbat("present")
+pbat("manufacturer")
+pbat("model_name")
+pbat("serial_number")
+

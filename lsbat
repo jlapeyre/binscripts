@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# View output of ls in a pager
+
+ls -ltrh --color=always "$@" | bat

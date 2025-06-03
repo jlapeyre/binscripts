@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Turn the backlight off repeatedly. If the external monitor goes to sleep,
+# and then wakes up, say, due to mouse movement, the laptop display goes to full
+# brightness, regardless of the previous setting. This script will turn it back
+# off within one second.
+
+# Work around bug in Clevo Ryzen backlight
+# Does not work :(
+xbacklight -1
+xbacklight +1
+xbacklight -1
+xbacklight 100
+
+sleep 1
+while true; do xbacklight 0; sleep 1; done

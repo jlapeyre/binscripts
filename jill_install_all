@@ -1,0 +1,17 @@
+#!/bin/env sh
+
+# Install several julia versions
+
+for vers in 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 1.10
+do
+    JDIR=/home/lapeyre/packages/julias/julia-$vers
+    if [ -e "$JDIR" ]; then
+        echo skipping existing $JDIR
+    else
+        echo jill install $vers --confirm
+        jill install $vers --confirm 
+    fi
+done
+
+echo jill install --unstable --confirm 
+jill install --unstable --confirm 

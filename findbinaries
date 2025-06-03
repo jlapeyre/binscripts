@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Print files in this directory that are not "scripts"
+# These will typically be binary executables.
+# I want to exclude these from the git repo.
+
+for f in *; do
+  [ -f "$f" ] && [ -x "$f" ] && file "$f" | grep -v 'script' >/dev/null && echo "$f"
+done

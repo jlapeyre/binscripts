@@ -1,0 +1,5 @@
+#!/usr/bin/sh
+
+# Don't charge battery to 100%. Rather maintain at lower charge to improve lifetime.
+
+echo 70 | sudo tee  /sys/class/power_supply/BAT0/charge_control_end_threshold
