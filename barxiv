@@ -1,5 +1,0 @@
-#!/bin/bash
-
-# Both arxiv programs
-arxivorg .
-arxiv_symlink_dir .
