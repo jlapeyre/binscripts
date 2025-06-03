@@ -1,3 +1,6 @@
 #!/usr/bin/env sh
 
+# Launch a custom application menu using the specified applications list.
+# This script wraps new-custom-menu with the default applications file.
+
 /home/lapeyre/bin/new-custom-menu /home/lapeyre/.config/i3/applications

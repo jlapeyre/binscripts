@@ -1,9 +1,16 @@
 #!/usr/bin/env perl
+
+# A Perl script that displays a menu of user-defined applications using `rofi`.
+# It reads a file of commands with optional descriptions and terminal hints,
+# shows a dmenu-style selection, and runs the selected command—optionally in a terminal.
+# Logs the executed command with a timestamp to ~/zlog.
+
 use v5.16;
 use warnings;
 use autodie;
 use Text::ParseWords;
 use IPC::Open2;
+
 
 #our $TERM_EMULATOR = "alacritty";
 our $TERM_EMULATOR = "kitty";
@@ -133,6 +140,10 @@ $app . '; sleep 10"';
 
 package main;
 
+if (@ARGV && ($ARGV[0] eq '--help' || $ARGV[0] eq '-h')) {
+    exec("perldoc", $0);
+}
+
 sub __main__ {
     my $menu = Menu->new();
     $menu->load_apps_list;
@@ -141,3 +152,52 @@ sub __main__ {
 }
 
 __main__();
+
+
+
+=pod
+
+=head1 NAME
+
+appmenu - Show a menu of applications using rofi and run the selected one
+
+=head1 SYNOPSIS
+
+  appmenu app_list.txt [extra rofi args]
+
+=head1 DESCRIPTION
+
+Reads a list of applications from a file, displays them via rofi, and runs the selected entry.
+Some entries may be launched in a terminal, based on a third field in the file.
+
+=head1 FORMAT
+
+Each line in the app list file should contain:
+
+  command  [description]  [flags...]
+
+Fields:
+
+  - command:     Shell command to execute
+  - description: Optional label shown in menu
+  - flags:       Optional space-separated flags:
+                   term        - run in terminal
+                   termsleep   - run in terminal, keep it open
+
+Lines starting with '#' are treated as comments.
+Quotes are required if fields contain spaces.
+
+Examples:
+
+  firefox                          Web browser
+  htop               -             term
+  "bash -c 'lsusb | less'" lsusb  term
+  emacs                           Full GUI Emacs
+  "emacs -nw" "Terminal Emacs"    term
+  "powerprofilesctl list" PowerProfiles termsleep
+
+=head1 OPTIONS
+
+  --help, -h   Show this help message
+
+=cut

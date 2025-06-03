@@ -1,5 +1,4 @@
-#!/usr/bin/sh
+#!/usr/bin/env sh
 
-# Do charge battery to 100%.
-
-echo 100 | sudo tee  /sys/class/power_supply/BAT0/charge_control_end_threshold
+# Set battery charge threshold to 100% (allow full charge).
+echo 100 | sudo tee /sys/class/power_supply/BAT0/charge_control_end_threshold

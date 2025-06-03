@@ -1,4 +1,6 @@
 #!/bin/env bash
 
-ack --ignore-dir=.venvs --ignore-dir=.venv --ignore-dir=.tox --pager="bat" "$@"
+# Wrapper for `ack` that ignores common virtual environment and tox directories,
+# and uses `bat` as the pager for syntax-highlighted output.
 
+ack --ignore-dir=.venvs --ignore-dir=.venv --ignore-dir=.tox --pager="bat" "$@"
