@@ -3,4 +3,4 @@
 # Wrapper for `ack` that skips common virtual environment and tox directories,
 # and uses `less -R` as the pager to preserve ANSI colors in the output.
 
-ack --ignore-dir=.venvs --ignore-dir=.venv --ignore-dir=.tox --pager="less -R" "$@"
+ack --ignore-dir=.venvs --ignore-dir=.venv --ignore-dir=.tox --ignore-dir=target --pager="less -R" "$@"
