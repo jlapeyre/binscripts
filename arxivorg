@@ -43,15 +43,21 @@ def extract_arxiv_id_from_text(filepath):
 def clean_file_name(text):
     # Normalize, remove bad chars, replace spaces with underscores
     text = unicodedata.normalize("NFKD", text)
+    text = text.replace('/', '_').replace('\\', '_').replace(':', '_')
     # keep letters, numbers, space, dash, underscore, parentheses, dot, comma
     text = re.sub(r'[^\w\s\-\(\)\[\]\.,]', '', text)
     text = re.sub(r'\s+', '_', text).strip('_')
-    return text[:100]  # limit length
+    return text[:100]
+
+def clean_arxiv_id(arxiv_id):
+    arxiv_id = re.sub(r'\/', '_', arxiv_id)
+    return arxiv_id
 
 def symlink_name(meta):
     # Format: Title_arXivID.pdf
     safe_title = clean_file_name(meta['title'])
     arxiv_id = meta.get('arxiv_id', 'unknown')
+    arxiv_id = clean_arxiv_id(arxiv_id)
     return f"{safe_title}_{arxiv_id}.pdf"
 
 def relative_symlink(target_path, link_path):
@@ -124,6 +130,7 @@ def create_symlink(meta, link_dir, skipped_files):
         relative_symlink(file_path, link_path)
         print(f"🔗 Created symlink: {link_name} -> {file_path}")
     except Exception as e:
+        print(f"❌ Failed to create symlink: {link_name} -> {file_path}")
         print(f"❌ Failed to create symlink for {file_name}: {e}")
         failed_files.append(file_name)
     return link_path
