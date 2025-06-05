@@ -1,2 +1,6 @@
 #!/bin/sh
-mnohup zathura $*
+
+# Launch Zathura detached from the terminal, suppressing all output.
+# Useful for opening PDFs from scripts without blocking or showing output.
+
+nohup zathura "$@" > /dev/null 2>&1 &

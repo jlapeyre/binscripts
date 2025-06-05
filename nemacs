@@ -1,2 +1,5 @@
 #!/bin/sh
-mnohup emacs $*
+
+# Launch Emacs detached from terminal, discarding all output.
+
+nohup emacs "$@" > /dev/null 2>&1 &

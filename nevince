@@ -1,2 +1,6 @@
 #!/bin/sh
-mnohup evince $*
+
+# Launch Evince detached from the terminal, suppressing all output.
+# Useful for opening PDFs from scripts without blocking or showing output.
+
+nohup evince "$@" > /dev/null 2>&1 &

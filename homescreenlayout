@@ -1,2 +1,21 @@
 #!/bin/sh
-xrandr --output eDP --primary --mode 1920x1080 --pos 0x0 --rotate normal --output HDMI-A-0 --mode 1920x1080 --pos 0x0 --rotate normal --output DisplayPort-0 --off --output DisplayPort-1 --off --output DisplayPort-2 --off --output DisplayPort-3 --off --output DisplayPort-4 --off --output DisplayPort-5 --off
+# Set up display configuration when at home
+
+# Set the laptop's built-in display (eDP) as the primary display
+# with 1920x1080 resolution and normal orientation at position (0,0)
+xrandr --output eDP \
+       --primary \
+       --mode 1920x1080 \
+       --pos 0x0 \
+       --rotate normal \
+
+# Enable HDMI output (external monitor) with the same resolution and position
+xrandr --output HDMI-A-0 \
+       --mode 1920x1080 \
+       --pos 0x0 \
+       --rotate normal \
+
+# Turn off all unused DisplayPort outputs
+for output in DisplayPort-0 DisplayPort-1 DisplayPort-2 DisplayPort-3 DisplayPort-4 DisplayPort-5; do
+    xrandr --output "$output" --off
+done

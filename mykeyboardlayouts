@@ -1,5 +1,7 @@
 #!/bin/sh
 
-# Two keyboard layouts, us and us-intl. Toggle by pressing both shifts at the same time.
-# us-intl gives accented characters via dead-keys.
-setxkbmap -layout us,us -variant ,intl -option grp:shifts_toggle
+# Set up two keyboard layouts: 'us' (standard US) and 'us-intl' (US International with dead keys).
+# Pressing both Shift keys simultaneously toggles between them.
+# This allows entering accented characters when needed, without changing keyboard hardware.
+
+setxkbmap -layout "us,us" -variant ",intl" -option "grp:shifts_toggle"

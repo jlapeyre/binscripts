@@ -1,3 +1,15 @@
-#!//bin/env bash
+#!/bin/env bash
+
+# This script allows you to run any command such that:
+#     It survives terminal/log-out (nohup)
+#     It runs in the background (&)
+#     It produces no terminal output (> /dev/null 2>&1)
+
+# 'nohup' to prevents the command from being terminated when the terminal closes.
+# 'nohup' also redirects output by default, but we redirect manually here:
 
 /usr/bin/nohup "$@" > /dev/null 2>&1 &
+# - "$@"           passes all the arguments as-is to the command
+# - > /dev/null    discards standard output
+# - 2>&1           discards standard error by redirecting it to standard output
+# - &              runs the command in the background
