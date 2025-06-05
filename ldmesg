@@ -1,5 +1,12 @@
 #!/bin/sh
 
-# Read kernel messages in less, in color. Scroll to botton
-# of messages initially.
-dmesg -T --color=always | grep -v "audit" | less -R +G
+# View kernel messages in color, excluding audit logs, using less.
+# -T            : Show human-readable timestamps
+# --color=always: Force colored output
+# grep -v "audit": Filter out audit messages (which can be noisy)
+# less -R       : Preserve raw color codes
+# +G            : Start less at the end of the output
+
+dmesg -T --color=always \
+    | grep -v "audit" \
+    | less -R +G
