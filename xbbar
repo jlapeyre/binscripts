@@ -1,10 +1,16 @@
 #!/bin/sh
 
-# Change below to suit your system
+# Script to monitor and display changes in the screen brightness level
+# It uses inotifywait to watch the brightness file and xob to show the output
+
+# Change the BACKLIGHT path below to match your system's configuration
 BACKLIGHT="/sys/class/backlight/amdgpu_bl1"
 BRIGHTNESS="$BACKLIGHT/brightness"
 MAX_BRIGHTNESS=$(cat "$BACKLIGHT/max_brightness")
 
-inotifywait -m -e modify "$BRIGHTNESS" \
-  | while IFS= read -r line; do cat $BRIGHTNESS; done \
-  | xob -m "$MAX_BRIGHTNESS"
+# Monitor the brightness file for modifications using inotifywait
+# On each change, read the new brightness level and pipe it to xob for display
+inotifywait -m -e modify "$BRIGHTNESS" | while IFS= read -r line; do
+  # Output the current brightness value
+  cat "$BRIGHTNESS"
+done | xob -m "$MAX_BRIGHTNESS"
