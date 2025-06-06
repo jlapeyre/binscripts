@@ -1,3 +1,8 @@
-#!/bin/bash
+#!/bin/sh
 
-watch -t -c  'ccat --color="always" < /proc/cpuinfo | grep  "MHz"'
+# This script uses the 'watch' command to continuously monitor the CPU speed.
+# It highlights and colorizes the "MHz" lines in the output from '/proc/cpuinfo'
+# using 'ccat', which adds color to the terminal output for better readability.
+# The '-t' option disables the output header, and '-c' clears the screen before each update.
+
+watch -t -c 'ccat --color="always" /proc/cpuinfo | grep "MHz"'

@@ -1,17 +1,25 @@
 #!/bin/env sh
 
-# Install several julia versions
+# This script installs several specific versions of Julia using the 'jill' tool.
+# It checks if each version is already installed, and if not, installs it.
+# Finally, it installs the unstable version of Julia.
 
+# Loop through the specified Julia versions
 for vers in 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 1.10
 do
+    # Define the directory for the current Julia version
     JDIR=/home/lapeyre/packages/julias/julia-$vers
+
+    # Check if the Julia version is already installed
     if [ -e "$JDIR" ]; then
-        echo skipping existing $JDIR
+        echo "Skipping existing $JDIR"
     else
-        echo jill install $vers --confirm
-        jill install $vers --confirm 
+        echo "Installing Julia version $vers"
+        # Install the Julia version using jill
+        jill install $vers --confirm
     fi
 done
 
-echo jill install --unstable --confirm 
-jill install --unstable --confirm 
+# Install the unstable version of Julia
+echo "Installing the unstable Julia version"
+jill install --unstable --confirm

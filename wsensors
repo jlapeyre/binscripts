@@ -1,3 +1,28 @@
 #!/bin/sh
 
-watch -d -t -c -n 1 "sensors | csensors.awk"
+# wsensors: A script to monitor system temperatures and fan speeds using Sensors.
+# This script uses the `watch` command to refresh the output every second,
+# highlighting changes with colors for better readability.
+
+# Get the directory of the current script
+SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+
+# Check if the 'sensors' command is available
+if ! command -v sensors &> /dev/null; then
+    echo "Error: 'sensors' command not found. Please install lm-sensors."
+    exit 1
+fi
+
+# Check if csensors.awk exists in the same directory as this script
+if [ ! -f "$SCRIPT_DIR/csensors.awk" ]; then
+    echo "Error: 'csensors.awk' not found in the script's directory."
+    exit 1
+fi
+
+# Options for the watch command:
+# -d : highlight differences between updates
+# -t : disable header showing the command being executed
+# -n 1 : refresh every second
+# The output of `sensors` is processed through csensors.awk to colorize the output.
+
+watch -d -t -c -n 1 "sensors | $SCRIPT_DIR/csensors.awk"
