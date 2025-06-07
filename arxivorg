@@ -11,6 +11,24 @@ from pathlib import Path
 import time
 import urllib.error
 
+"""
+========================================
+arxivorg - A script for managing arXiv papers
+========================================
+
+This script processes a directory named "papers," containing PDFs from the arXiv, and generates an Emacs Org mode file for browsing paper titles. The file includes links to local copies, original arXiv entries, and SciRate. Symlinks for the local copies use paper titles in their names, making navigation intuitive without relying on IDs.
+
+Additional Details:
+1. Scans the "papers" directory for PDF files containing arXiv IDs.
+2. Extracts arXiv IDs from file names or the first page of the PDFs.
+3. Fetches metadata from the arXiv API, including titles, authors, publication dates, and links.
+4. Creates symlinks in a specified directory with paper titles and arXiv IDs for easier navigation.
+5. Caches metadata to avoid repeated API calls and stores it in a JSON file.
+
+Usage:
+Run the script from the command line, providing optional parameters for the target directory, link directory, refresh mode, and verbosity.
+"""
+
 paper_dir = Path("papers")
 bibfile = Path("00CONTENTS.txt")
 
@@ -145,6 +163,12 @@ def main(target_dir=None, link_dir=None, refresh=False, verbose=False):
     if link_dir is None:
         link_dir = os.path.join(target_dir, 'arxiv_links')
 
+    paper_path = Path(target_dir) / paper_dir
+    # Check for the existence of the "papers" directory
+    if not paper_path.is_dir():
+        print(f"❌ Error: The required directory '{paper_path}' does not exist.")
+        return  # Gracefully exit if the directory is missing
+
     if refresh and os.path.exists(link_dir):
         print(f"Refreshing symlink directory: deleting {link_dir}")
         shutil.rmtree(link_dir)
@@ -164,7 +188,6 @@ def main(target_dir=None, link_dir=None, refresh=False, verbose=False):
     skipped_files = []
     failed_files = []
 
-    paper_path = os.path.join(target_dir, paper_dir)
     for file_name in sorted(os.listdir(paper_path)):
         if not file_name.endswith('.pdf'):
             continue
