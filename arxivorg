@@ -11,9 +11,8 @@ from pathlib import Path
 import time
 import urllib.error
 
+paper_dir = Path("papers")
 bibfile = Path("00CONTENTS.txt")
-outdir = Path(".")
-cache_path = outdir / "arxiv_metadata.json"
 
 def scirate_url(arxiv_id):
     base_id = re.sub(r'v\d+$', '', arxiv_id)
@@ -135,16 +134,16 @@ def create_symlink(meta, link_dir, skipped_files):
         failed_files.append(file_name)
     return link_path
 
-def main(pdf_dir=None, link_dir=None, refresh=False, verbose=False):
+def main(target_dir=None, link_dir=None, refresh=False, verbose=False):
 
     def vprint(*args):
         if verbose:
             print(*args)
 
-    if pdf_dir is None:
-        pdf_dir = "."
+    if target_dir is None:
+        target_dir = "."
     if link_dir is None:
-        link_dir = os.path.join(pdf_dir, 'arxiv_links')
+        link_dir = os.path.join(target_dir, 'arxiv_links')
 
     if refresh and os.path.exists(link_dir):
         print(f"Refreshing symlink directory: deleting {link_dir}")
@@ -152,9 +151,9 @@ def main(pdf_dir=None, link_dir=None, refresh=False, verbose=False):
 
     os.makedirs(link_dir, exist_ok=True)
 
-    contents_path = os.path.join(pdf_dir, bibfile)
-    org_path = os.path.join(pdf_dir, 'arxiv.org')
-    cache_path = Path(pdf_dir) / "arxiv_metadata.json"
+    contents_path = os.path.join(target_dir, bibfile)
+    org_path = os.path.join(target_dir, 'arxiv.org')
+    cache_path = Path(target_dir) / "arxiv_metadata.json"
 
     if os.path.exists(cache_path):
         vprint(f"Backing up {cache_path}")
@@ -165,11 +164,12 @@ def main(pdf_dir=None, link_dir=None, refresh=False, verbose=False):
     skipped_files = []
     failed_files = []
 
-    for file_name in sorted(os.listdir(pdf_dir)):
+    paper_path = os.path.join(target_dir, paper_dir)
+    for file_name in sorted(os.listdir(paper_path)):
         if not file_name.endswith('.pdf'):
             continue
 
-        file_path = os.path.join(pdf_dir, file_name)
+        file_path = os.path.join(paper_path, file_name)
 
         arxiv_id = extract_arxiv_id_from_file_name(file_name)
         if not arxiv_id:
@@ -256,10 +256,10 @@ def main(pdf_dir=None, link_dir=None, refresh=False, verbose=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate metadata files for arXiv PDFs with caching and fallback text extraction.')
-    parser.add_argument('--pdf_dir', help='Path to directory containing arXiv PDFs. (defaults: "."')
-    parser.add_argument('--link-dir', help="Output symlink directory (default: pdf_dir/arxiv_links)")
+    parser.add_argument('--target_dir', help='Path to directory with org files and metadata (defaults: "."')
+    parser.add_argument('--link-dir', help="Output symlink directory (default: target_dir/arxiv_links)")
     parser.add_argument('-r', '--refresh', action='store_true', help="Clear and rebuild the symlink directory.")
     parser.add_argument('-v', '--verbose', action='store_true', help="Be louder while running.")
     args = parser.parse_args()
-    main(args.pdf_dir, args.link_dir, args.refresh, args.verbose)
+    main(args.target_dir, args.link_dir, args.refresh, args.verbose)
     print("✓ Done.")
