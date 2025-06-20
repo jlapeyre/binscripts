@@ -1,0 +1,20 @@
+#!/bin/env sh
+
+# Define the path to your i3 configuration file.
+CONFIG_FILE=/home/lapeyre/.config/i3/config
+
+# Check if the configuration file exists before attempting to modify it.
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "Error: Configuration file not found at $CONFIG_FILE"
+  exit 1
+fi
+
+# Use sed to toggle the 'strip_workspace_numbers' value between 'yes' and 'no'.
+# It temporarily uses 'placeholder' to achieve the switch.
+sed -i '/strip_workspace_numbers/{s/yes/placeholder/; s/no/yes/; s/placeholder/no/}' "$CONFIG_FILE"
+
+# Usage in i3 configuration:
+# You can bind this script to a key combination and reload the configuration.
+# For example, adding the following line to your i3 config will allow you to toggle
+# the workspace numbers and refresh i3:
+# bindsym $mod+Shift+n exec /home/lapeyre/bin/i3stripnum && i3-msg reload

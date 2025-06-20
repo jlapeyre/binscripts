@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Flip mapping so that I can have the cable on ther right
+xsetwacom set 19 Rotate half
