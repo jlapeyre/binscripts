@@ -40,6 +40,10 @@ def extract_arxiv_id_from_file_name(file_name):
     # Matches modern (2103.12345) or old (hep-th/9901001) style IDs
     match = re.search(r'(\d{4}\.\d{4,5}|[a-z\-]+/\d{7})', file_name)
     return match.group(1) if match else None
+    # This: re.search(r'(\d{7})', file_name) extracts the old style id.
+    # But it is not sufficient to get metadata, because the prefix, eg. quant-ph
+    # is missing.
+    # Instead, rely on backup method of extracting filename from the text of the pdf.
 
 def extract_arxiv_id_from_text(filepath):
     try:

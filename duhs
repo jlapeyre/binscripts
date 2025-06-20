@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# Run du, human readable, depth 1, and sort with largest last
+
+du -h --max-depth=1 "$@" | sort -h
