@@ -214,12 +214,7 @@ WhiteKing WhiteKnight WhitePawn WhiteQueen WhiteRook Wolf
 WolframLanguageLogo WolframLanguageLogoCircle Xi Xnor Xor
 YAcute YDoubleDot Yen ZHacek Zeta
 
-   ))
-
-(defvar xah-wolfram-funs1 nil List of Wolfram Language symbols. Part of many.)
-
-(setq xah-wolfram-funs1
-'( AASTriangle AbelianGroup Abort AbortKernels AbortProtect
+AASTriangle AbelianGroup Abort AbortKernels AbortProtect
 AbortScheduledTask Above Abs AbsArg AbsArgPlot Absolute
 AbsoluteCorrelation AbsoluteCorrelationFunction
 AbsoluteCurrentValue AbsoluteDashing AbsoluteFileName
@@ -705,12 +700,6 @@ DynamicModuleValues DynamicName DynamicNamespace DynamicReference
 DynamicSetting DynamicUpdating DynamicWrapper DynamicWrapperBox
 DynamicWrapperBoxOptions docQueryString
 
-))
-
-(defvar xah-wolfram-funs2 nil List of Wolfram Language symbols. Part of many.)
-
-(setq xah-wolfram-funs2
-'(
 E
 EarthImpactData EarthquakeData EccentricityCentrality Echo
 EchoEvaluation EchoFunction EchoLabel EchoTiming EclipseType
@@ -1015,11 +1004,9 @@ HypergeometricPFQ HypergeometricPFQRegularized HypergeometricU
 Hyperlink HyperlinkAction HyperlinkCreationSettings Hyperplane
 Hyphenation HyphenationOptions HypoexponentialDistribution
 HypothesisTestData
-)
-)
 
-(defvar xah-wolfram-funs2-5 nil List of Wolfram Language symbols. Part of many.)
-(setq xah-wolfram-funs2-5 '(I IconData Iconize IconizedObject
+
+I IconData Iconize IconizedObject
 IconRules Icosahedron Identity IdentityMatrix If
 IgnoreCase IgnoreDiacritics IgnorePunctuation IgnoreSpellCheck
 IgnoringInactive Im Image Image3D Image3DProjection
@@ -1319,10 +1306,8 @@ MultiLetterItalics MultiLetterStyle MultilineFunction
 Multinomial MultinomialDistribution MultinormalDistribution
 MultiplicativeOrder Multiplicity MultiplySides MultiscriptBox
 Multiselection MultivariateHypergeometricDistribution
-MultivariatePoissonDistribution MultivariateTDistribution))
+MultivariatePoissonDistribution MultivariateTDistribution
 
-(defvar xah-wolfram-funs3 nil List of Wolfram Language symbols. Part of many.)
-(setq xah-wolfram-funs3 '(
 N
 NakagamiDistribution NameQ Names NamespaceBox
 NamespaceBoxOptions Nand NArgMax NArgMin NBernoulliB
@@ -1432,10 +1417,7 @@ OverBar OverDot Overflow OverHat Overlaps Overlay
 OverlayBox OverlayBoxOptions Overscript OverscriptBox
 OverscriptBoxOptions OverTilde OverVector OverwriteTarget
 OwenT OwnValues
- ))
 
-(defvar xah-wolfram-funs3-5 nil List of Wolfram Language symbols. Part of many.)
-(setq xah-wolfram-funs3-5 '(
 Package PackingMethod PackPaclet
 PacletDataRebuild PacletDirectoryAdd PacletDirectoryLoad
 PacletDirectoryRemove PacletDirectoryUnload PacletDisable
@@ -1669,10 +1651,8 @@ RowsEqual RowSpacings RSolve RSolveValue RudinShapiro
 RudvalisGroupRu Rule RuleCondition RuleDelayed RuleForm
 RulePlot RulerUnits Run RunProcess RunScheduledTask
 RunThrough RuntimeAttributes RuntimeOptions
-RussellRaoDissimilarity))
+RussellRaoDissimilarity
 
-(defvar xah-wolfram-funs4 nil List of Wolfram Language symbols. Part of many.)
-(setq xah-wolfram-funs4 '(
 SameQ SameTest SameTestProperties
 SampledEntityClass SampleDepth SampledSoundFunction
 SampledSoundList SampleRate SamplingPeriod SARIMAProcess
@@ -2079,12 +2059,9 @@ WriteLine WriteString Wronskian XMLElement XMLObject
 XMLTemplate Xnor Xor XYZColor Yellow Yesterday
 YuleDissimilarity ZernikeR ZeroSymmetric ZeroTest
 ZeroWidthTimes Zeta ZetaZero ZIPCodeData ZipfDistribution
-ZoomCenter ZoomFactor ZTest ZTransform ))
+ZoomCenter ZoomFactor ZTest ZTransform
 
-(defvar xah-wolfram-dollar-names nil List of Wolfram Language symbols. Part of many.)
-
-(setq xah-wolfram-dollar-names
-'($Aborted
+$Aborted
 $ActivationGroupID $ActivationKey $ActivationUserRegistered
 $AddOnsDirectory $AllowDataUpdates
 $AllowExternalChannelFunctions $AllowInternet $AssertFunction
