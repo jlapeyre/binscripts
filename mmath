@@ -1,0 +1,21 @@
+#!/bin/sh
+
+# Run rlwrap for readline support with Mathematica.
+# -rawterm disable any readline-like stuff in `math`. It will interfere badly with readline
+# -p'0;32' Green color on input prompt
+# -r remember history. It will be named ~/.mmath_histrory  (this script is `mmath`)
+
+# -z handle_hotkeys
+# This allows a few select bindings in ~/.inputrc
+# I use this
+
+# # Use fzf to search history in rlwrap
+# "\C-f": rlwrap-hotkey
+
+# # Since the binding above clobbers ctrl-f, we bind another key to forward-char
+# "\C-g": forward-char
+
+# Choosing ctrl-f for fzf search is very very very unfortunate, since forward-char is
+# essential for forward-char for many users. But this is hardcoded in rlwrap
+
+rlwrap -p'0;32' -r -z handle_hotkeys /usr/local/bin/math -rawterm
