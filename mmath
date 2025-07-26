@@ -20,10 +20,14 @@
 rlwrap -p'green' -r -z handle_hotkeys -f ~/bin/mma_words /usr/local/bin/math -rawterm
 
 ########################
+# Edited the perl and python scripts (installed with package)
+# to use ctrl-g for fzf search rather than ctrl-f. Otherwise, forward-char would be clobbered.
+# These files are
+# /usr/share/rlwrap/filters/handle_hotkeys
+# /usr/share/rlwrap/filters/handle_hotkeys.py
+#
+# Then ~/.inputrc is:
 # ---- ~/.inputrc ----
 # Use fzf to search history in rlwrap
-# "\C-f": rlwrap-hotkey
-
-# Since the binding above clobbers Ctrl-F, bind another key to forward-char
-# "\C-g": forward-char
-# ---------------------
+# "\C-g": rlwrap-hotkey
+# ----
