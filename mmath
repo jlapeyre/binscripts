@@ -1,23 +1,29 @@
 #!/bin/sh
 
-# Run rlwrap for readline support with Mathematica.
-# -rawterm disable any readline-like stuff in `math`. It will interfere badly with readline
-# -p'0;32' Green color on input prompt
-# -r remember history. It will be named ~/.mmath_histrory  (this script is `mmath`)
+# Run rlwrap to provide readline support for Mathematica.
+# The -rawterm option disables any readline-like features in `math` itself,
+# which would otherwise interfere badly with rlwrap's readline.
+
+# -p'0;32'    Use green color for the input prompt, or
+# -p'green'   Use green color for the input prompt.
+
+# -r          Enable history support; the history file will be named ~/.mmath_history
+#             (since this script is named `mmath`).
 
 # -z handle_hotkeys
-# This allows a few select bindings in ~/.inputrc
-# I use this
+#             Enables a few select key bindings in ~/.inputrc (see below for details).
 
-# ---- ~/.inputrc
-# # Use fzf to search history in rlwrap
-# "\C-f": rlwrap-hotkey
+# -f ~/bin/mma_words
+#             Use a list of words for completion, taken from the list of built-in symbols
+#             in an Emacs package.
 
-# # Since the binding above clobbers ctrl-f, we bind another key to forward-char
-# "\C-g": forward-char
-# ----
+rlwrap -p'green' -r -z handle_hotkeys -f ~/bin/mma_words /usr/local/bin/math -rawterm
 
-# Choosing ctrl-f for fzf search is very very very unfortunate, since forward-char is
-# essential for forward-char for many users. But this is hardcoded in rlwrap
+########################
+# ---- ~/.inputrc ----
+# Use fzf to search history in rlwrap
+"\C-f": rlwrap-hotkey
 
-rlwrap -p'0;32' -r -z handle_hotkeys /usr/local/bin/math -rawterm
+# Since the binding above clobbers Ctrl-F, bind another key to forward-char
+"\C-g": forward-char
+# ---------------------
