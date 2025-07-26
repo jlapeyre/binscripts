@@ -1,5 +1,7 @@
 #!/bin/sh
 
-# Flip mapping so that I can have the cable on ther right
-# Don't use the id number, because it changes
+# Flip mapping so that I can have the cable on the right.
+# Don't use the id number, because it changes on reboot/reconnect.
+# Use the name.
+
 xsetwacom set "Wacom One by Wacom M Pen stylus" Rotate half
