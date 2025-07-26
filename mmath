@@ -9,11 +9,13 @@
 # This allows a few select bindings in ~/.inputrc
 # I use this
 
+# ---- ~/.inputrc
 # # Use fzf to search history in rlwrap
 # "\C-f": rlwrap-hotkey
 
 # # Since the binding above clobbers ctrl-f, we bind another key to forward-char
 # "\C-g": forward-char
+# ----
 
 # Choosing ctrl-f for fzf search is very very very unfortunate, since forward-char is
 # essential for forward-char for many users. But this is hardcoded in rlwrap
