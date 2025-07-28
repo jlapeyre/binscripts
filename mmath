@@ -1,33 +1,168 @@
 #!/bin/sh
 
-# Run rlwrap to provide readline support for Mathematica.
-# The -rawterm option disables any readline-like features in `math` itself,
-# which would otherwise interfere badly with rlwrap's readline.
+PROMPT_COLOUR="blue"
+USE_C=1
+USE_R=1
+USE_Z=1
+USE_F=1
 
-# -p'0;32'    Use green color for the input prompt, or
-# -p'green'   Use green color for the input prompt.
+# List allowed MathKernel options, mark those that need arguments
+MK_OPTS="
+-activate:arg
+-licenseid
+-licenseinfo
+-lmverbose
+-pwfile:arg
+-initfile:arg
+-noinit
+-run:arg
+-script:arg
+-noprompt
+-rawterm
+-wstp
+-machineid
+-machineinfo
+-version
+"
 
-# -r          Enable history support; the history file will be named ~/.mmath_history
-#             (since this script is named `mmath`).
+print_help() {
+    cat <<EOF
+mmath – A wrapper for Mathematica's CLI (math) with rlwrap features
 
-# -z handle_hotkeys
-#             Enables a few select key bindings in ~/.inputrc (see below for details).
+Usage:
+  mmath [wrapper options] [Mathematica options]
 
-# -f ~/bin/mma_words
-#             Use a list of words for completion, taken from the list of built-in symbols
-#             in an Emacs package.
+Wrapper options (configure rlwrap behavior):
 
-rlwrap -p'green' -r -z handle_hotkeys -f ~/bin/mma_words /usr/local/bin/math -rawterm
+  -p COLOUR, --prompt-colour=COLOUR
+      Set color of rlwrap's prompt (default: green).
+      Example: mmath -p blue
 
-########################
-# Edited the perl and python scripts (installed with package)
-# to use ctrl-g for fzf search rather than ctrl-f. Otherwise, forward-char would be clobbered.
-# These files are
-# /usr/share/rlwrap/filters/handle_hotkeys
-# /usr/share/rlwrap/filters/handle_hotkeys.py
-#
-# Then ~/.inputrc is:
-# ---- ~/.inputrc ----
-# Use fzf to search history in rlwrap
-# "\C-g": rlwrap-hotkey
-# ----
+  --no-c
+      Do NOT enable rlwrap's -c option (filename completion by TAB in prompts).
+
+  --no-r
+      Do NOT enable rlwrap's -r option (write/read input history).
+
+  --no-z
+      Do NOT enable rlwrap's -z handle_hotkeys (enables ctrl-g for fzf-based history search).
+
+  --no-f
+      Do NOT enable rlwrap's -f ~/bin/mma_words (reads a wordfile of Mathematica reserved words for TAB completion).
+
+  -h, --help
+      Show this help and exit.
+
+Mathematica (MathKernel) options (only these are allowed and passed through):
+
+  Licensing:
+    -activate ACTKEY       Activate Mathematica with a key and exit.
+    -licenseid             Show your $LicenseID and exit.
+    -licenseinfo           Show detailed license info and exit.
+    -lmverbose             Print info about MathLM communication.
+    -pwfile FILE           Use the password file instead of standard activation.
+
+  Startup:
+    -initfile FILE         Run commands from the specified initialization file.
+    -noinit                Do not load standard initialization files.
+    -run CMD               Execute CMD on startup.
+
+  Execution Mode:
+    -script FILE           Run Mathematica in script mode (batch; take code from FILE).
+    -noprompt              Hide the usual Mathematica prompt and banners.
+    -wstp                  Use WSTP (Wolfram Symbolic Transfer Protocol) only.
+
+  Utility:
+    -machineid             Print $MachineID and exit.
+    -machineinfo           Print $MachineName and $MachineID (tab-separated), then exit.
+    -version               Print Mathematica version and exit.
+
+Additional notes:
+  - The -rawterm option is always enabled for the best interactive readline support; you do not need to set it.
+  - Any unrecognized/math options not listed above are ignored with a warning. This prevents typos from causing confusion.
+  - Arguments after a recognized MathKernel option that requires a value (e.g., -initfile myfile) are passed as expected.
+
+Examples:
+  mmath -p yellow -initfile foo.m
+      Starts Mathematica with a yellow prompt and initialization file foo.m
+
+  mmath --no-f -run "Print[\\"Hello, world!\\"]"
+      Disables word completion, runs a command on startup
+
+  mmath -licenseinfo
+      Prints licensing information and exits
+
+EOF
+}
+
+# args parsing
+MATH_ARGS=
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h|--help)
+            print_help
+            exit 0
+            ;;
+        --prompt-colour=*)
+            PROMPT_COLOUR="${1#*=}"
+            ;;
+        -p)
+            shift; [ $# -gt 0 ] && PROMPT_COLOUR="$1" || { echo "Missing arg for -p"; exit 1; }
+            ;;
+        --prompt-colour)
+            shift; [ $# -gt 0 ] && PROMPT_COLOUR="$1" || { echo "Missing arg for --prompt-colour"; exit 1; }
+            ;;
+        --no-c) USE_C=0 ;;
+        --no-r) USE_R=0 ;;
+        --no-z) USE_Z=0 ;;
+        --no-f) USE_F=0 ;;
+        *)
+            # Check if argument is an allowed MathKernel option (with or without arg)
+            ALLOWED=0
+            for DEF in $MK_OPTS; do
+                OPT="${DEF%%:*}"
+                NEEDS_ARG=0
+                [ "${DEF#*:}" = "arg" ] && NEEDS_ARG=1
+                if [ "$1" = "$OPT" ]; then
+                    ALLOWED=1
+                    if [ $NEEDS_ARG -eq 1 ]; then
+                        shift
+                        [ $# -eq 0 ] && { echo "Option $OPT requires an argument"; exit 1; }
+                        MATH_ARGS="$MATH_ARGS $OPT \"$1\""
+                    else
+                        MATH_ARGS="$MATH_ARGS $OPT"
+                    fi
+                    break
+                fi
+            done
+            # Handle -option=value form for options needing arguments
+            if [ $ALLOWED -eq 0 ]; then
+                for DEF in $MK_OPTS; do
+                    OPT="${DEF%%:*}"
+                    NEEDS_ARG=0
+                    [ "${DEF#*:}" = "arg" ] && NEEDS_ARG=1
+                    if [ $NEEDS_ARG -eq 1 ] && [ "${1%%=*}" = "$OPT" ]; then
+                        ALLOWED=1
+                        ARGVAL="${1#*=}"
+                        MATH_ARGS="$MATH_ARGS $OPT \"$ARGVAL\""
+                        break
+                    fi
+                done
+            fi
+            if [ $ALLOWED -eq 0 ]; then
+                echo "Warning: argument '$1' is not recognized, ignored."
+            fi
+            ;;
+    esac
+    shift
+done
+
+# Build rlwrap options
+RLWRAP_OPTS=
+[ "$USE_C" = 1 ] && RLWRAP_OPTS="$RLWRAP_OPTS -c"
+[ "$USE_R" = 1 ] && RLWRAP_OPTS="$RLWRAP_OPTS -r"
+[ "$USE_Z" = 1 ] && RLWRAP_OPTS="$RLWRAP_OPTS -z handle_hotkeys"
+[ "$USE_F" = 1 ] && RLWRAP_OPTS="$RLWRAP_OPTS -f ~/bin/mma_words"
+RLWRAP_OPTS="$RLWRAP_OPTS -p'$PROMPT_COLOUR'"
+
+eval exec rlwrap $RLWRAP_OPTS /usr/local/bin/math $MATH_ARGS -rawterm
