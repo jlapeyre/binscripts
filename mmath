@@ -168,5 +168,10 @@ RLWRAP_OPTS=
 [ "$USE_F" = 1 ] && RLWRAP_OPTS="$RLWRAP_OPTS -f ~/bin/mma_words"
 RLWRAP_OPTS="$RLWRAP_OPTS -p'$PROMPT_COLOR'"
 
-# Omit and extra space after word completion.
-eval exec rlwrap --extra-char-after-completion=  $RLWRAP_OPTS /usr/local/bin/math $MATH_ARGS -rawterm
+# Size of history file
+RLWRAP_OPTS="$RLWRAP_OPTS -s 10000"
+
+# Do not add an extra space after word completion.
+RLWRAP_OPTS="$RLWRAP_OPTS --extra-char-after-completion="
+
+eval exec rlwrap $RLWRAP_OPTS /usr/local/bin/math $MATH_ARGS -rawterm
