@@ -1,6 +1,6 @@
 #!/bin/sh
 
-PROMPT_COLOUR="blue"
+PROMPT_COLOR="Cyan"
 USE_C=1
 USE_R=1
 USE_Z=1
@@ -34,21 +34,24 @@ Usage:
 
 Wrapper options (configure rlwrap behavior):
 
-  -p COLOUR, --prompt-colour=COLOUR
-      Set color of rlwrap's prompt (default: green).
-      Example: mmath -p blue
+  -p COLOR, --prompt-color=COLOR
+      Set color of the prompt (default: Cyan). If the color is capitalized,
+      use bold styling. Available colors: black, red, green, yellow, blue, cyan, purple, white.
+      An ANSI color spec may be used, as well.
+      Examples: -p blue, -p '1;31' for bold red.
 
   --no-c
-      Do NOT enable rlwrap's -c option (filename completion by TAB in prompts).
+      Do NOT enable filename completion by TAB in prompts.
 
   --no-r
-      Do NOT enable rlwrap's -r option (write/read input history).
+      Do NOT enable write/read input history.
 
   --no-z
-      Do NOT enable rlwrap's -z handle_hotkeys (enables ctrl-g for fzf-based history search).
+      Do NOT enable ctrl-g for fzf-based history search. Enabled by default, using
+      rlwrap's -z handle_hotkeys.
 
   --no-f
-      Do NOT enable rlwrap's -f ~/bin/mma_words (reads a wordfile of Mathematica reserved words for TAB completion).
+      Do NOT enable TAB completion of Mathematica reserved words taken from ~/bin/mma_words.
 
   -h, --help
       Show this help and exit.
@@ -86,7 +89,7 @@ Examples:
   mmath -p yellow -initfile foo.m
       Starts Mathematica with a yellow prompt and initialization file foo.m
 
-  mmath --no-f -run "Print[\\"Hello, world!\\"]"
+  mmath --no-f -run 'Print[\\"Hello, world!\\"]'
       Disables word completion, runs a command on startup
 
   mmath -licenseinfo
@@ -103,14 +106,14 @@ while [ $# -gt 0 ]; do
             print_help
             exit 0
             ;;
-        --prompt-colour=*)
-            PROMPT_COLOUR="${1#*=}"
+        --prompt-color=*)
+            PROMPT_COLOR="${1#*=}"
             ;;
         -p)
-            shift; [ $# -gt 0 ] && PROMPT_COLOUR="$1" || { echo "Missing arg for -p"; exit 1; }
+            shift; [ $# -gt 0 ] && PROMPT_COLOR="$1" || { echo "Missing arg for -p"; exit 1; }
             ;;
-        --prompt-colour)
-            shift; [ $# -gt 0 ] && PROMPT_COLOUR="$1" || { echo "Missing arg for --prompt-colour"; exit 1; }
+        --prompt-color)
+            shift; [ $# -gt 0 ] && PROMPT_COLOR="$1" || { echo "Missing arg for --prompt-color"; exit 1; }
             ;;
         --no-c) USE_C=0 ;;
         --no-r) USE_R=0 ;;
@@ -163,6 +166,7 @@ RLWRAP_OPTS=
 [ "$USE_R" = 1 ] && RLWRAP_OPTS="$RLWRAP_OPTS -r"
 [ "$USE_Z" = 1 ] && RLWRAP_OPTS="$RLWRAP_OPTS -z handle_hotkeys"
 [ "$USE_F" = 1 ] && RLWRAP_OPTS="$RLWRAP_OPTS -f ~/bin/mma_words"
-RLWRAP_OPTS="$RLWRAP_OPTS -p'$PROMPT_COLOUR'"
+RLWRAP_OPTS="$RLWRAP_OPTS -p'$PROMPT_COLOR'"
 
-eval exec rlwrap $RLWRAP_OPTS /usr/local/bin/math $MATH_ARGS -rawterm
+# Omit and extra space after word completion.
+eval exec rlwrap --extra-char-after-completion=  $RLWRAP_OPTS /usr/local/bin/math $MATH_ARGS -rawterm
