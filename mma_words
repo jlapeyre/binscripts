@@ -2151,4 +2151,5 @@ $UserAgentString $UserAgentVersion $UserBaseDirectory
 $UserBasePacletsDirectory $UserDocumentsDirectory $Username
 $UserName $UserURLBase $Version $VersionNumber
 $VideoDecoders $VideoEncoders $VoiceStyles
-$WolframDocumentsDirectory $WolframID $WolframUUID
+$WolframDocumentsDirectory $WolframID $WolframUUID,
+UniqueElements
