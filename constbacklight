@@ -7,10 +7,10 @@
 
 # Work around bug in Clevo Ryzen backlight
 # Does not work :(
-xbacklight -1
-xbacklight +1
-xbacklight -1
-xbacklight 100
+# xbacklight -1
+# xbacklight +1
+# xbacklight -1
+# xbacklight 100
 
-sleep 1
-while true; do xbacklight 0; sleep 1; done
+# sleep 1
+# while true; do xbacklight 0; sleep 1; done
