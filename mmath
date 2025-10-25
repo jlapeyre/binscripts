@@ -51,7 +51,7 @@ Wrapper options (configure rlwrap behavior):
       rlwrap's -z handle_hotkeys.
 
   --no-f
-      Do NOT enable TAB completion of Mathematica reserved words taken from ~/bin/mma_words.
+      Do NOT enable TAB completion of Mathematica reserved words taken from ~/.Wolfram/mma_words.
 
   -h, --help
       Show this help and exit.
@@ -165,7 +165,7 @@ RLWRAP_OPTS=
 [ "$USE_C" = 1 ] && RLWRAP_OPTS="$RLWRAP_OPTS -c"
 [ "$USE_R" = 1 ] && RLWRAP_OPTS="$RLWRAP_OPTS -r"
 [ "$USE_Z" = 1 ] && RLWRAP_OPTS="$RLWRAP_OPTS -z handle_hotkeys"
-[ "$USE_F" = 1 ] && RLWRAP_OPTS="$RLWRAP_OPTS -f ~/bin/mma_words"
+[ "$USE_F" = 1 ] && RLWRAP_OPTS="$RLWRAP_OPTS -f ~/.Wolfram/mma_words"
 RLWRAP_OPTS="$RLWRAP_OPTS -p'$PROMPT_COLOR'"
 
 # Size of history file
