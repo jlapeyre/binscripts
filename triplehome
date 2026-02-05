@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# Three screens
+# Two external monitors and laptop screen ON
+
+xrandr --output DisplayPort-0 --auto --left-of HDMI-A-0 \
+       --output HDMI-A-0 --auto --primary \
+       --output eDP         --auto --right-of HDMI-A-0

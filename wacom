@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# Wacom drawing tablet orientation
+# Flip mapping so that I can have the cable on the right.
+# Don't use the id number, because it changes on reboot/reconnect.
+# Use the name.
+
+[ "$1" = "-h" ] || [ "$1" = "--help" ] && { printf "Usage: %s [--help] [none|cw|ccw|half]\nDefault: half (flip for cable on right)\n" "$(basename "$0")"; exit 0; }
+dev='Wacom One by Wacom M Pen stylus'
+rot=${1:-half}
+xsetwacom set "$dev" Rotate "$rot"

@@ -1,0 +1,17 @@
+#!/usr/bin/sh
+
+# Turns *off* wakeup for these devices or whatever
+# This `cat /proc/acpi/wakeup`
+# Should show nothing except SLBP disabled.
+# SLBP should be enabled. It is the power button.
+
+echo GPP6 > /proc/acpi/wakeup
+echo GP11 > /proc/acpi/wakeup
+echo GP12 > /proc/acpi/wakeup
+echo XHC0 > /proc/acpi/wakeup
+echo XHC1 > /proc/acpi/wakeup
+echo XHC3 > /proc/acpi/wakeup
+echo XHC4 > /proc/acpi/wakeup
+echo NHI0 > /proc/acpi/wakeup
+echo NHI1 > /proc/acpi/wakeup
+echo LID > /proc/acpi/wakeup
