@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+HDMI="HDMI-A-0"
+DP="DisplayPort-0"
+
+if xrandr | grep -q "^$HDMI connected primary"; then
+  tgt="$DP"
+else
+  tgt="$HDMI"
+fi
+
+if xrandr | grep -q "^$tgt connected"; then
+  xrandr --output "$tgt" --primary
+fi
