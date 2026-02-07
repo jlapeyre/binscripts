@@ -1,55 +1,373 @@
 #!/usr/bin/python
 
-# Print battery info to stdout
+# Print battery info to stdout, with autodetected power_supply entries,
+# using a single per-run snapshot (uevent) and human-friendly units.
 
-def readf(fname):
-    with open(fname) as f:
-        return f.readlines()
+import os
 
-def ac(f):
-    return "/sys/class/power_supply/AC/" + f
+PS = "/sys/class/power_supply"
+AC_TYPES = {"AC", "Mains", "USB", "USB_C", "USB_PD", "Wireless"}
 
-def bat(f):
-    return "/sys/class/power_supply/BAT0/" + f
+# Map friendly field names to uevent keys
+BAT_KEYS = {
+    "status": "POWER_SUPPLY_STATUS",
+    "capacity": "POWER_SUPPLY_CAPACITY",
+    "capacity_level": "POWER_SUPPLY_CAPACITY_LEVEL",
+    "charge_control_start_threshold": "POWER_SUPPLY_CHARGE_CONTROL_START_THRESHOLD",
+    "charge_control_end_threshold": "POWER_SUPPLY_CHARGE_CONTROL_END_THRESHOLD",
+    "charge_behaviour": "POWER_SUPPLY_CHARGE_BEHAVIOUR",
+    "power_now": "POWER_SUPPLY_POWER_NOW",
+    "energy_now": "POWER_SUPPLY_ENERGY_NOW",
+    "energy_full": "POWER_SUPPLY_ENERGY_FULL",
+    "energy_full_design": "POWER_SUPPLY_ENERGY_FULL_DESIGN",
+    "charge_now": "POWER_SUPPLY_CHARGE_NOW",
+    "charge_full": "POWER_SUPPLY_CHARGE_FULL",
+    "charge_full_design": "POWER_SUPPLY_CHARGE_FULL_DESIGN",
+    "current_now": "POWER_SUPPLY_CURRENT_NOW",
+    "voltage_now": "POWER_SUPPLY_VOLTAGE_NOW",
+    "cycle_count": "POWER_SUPPLY_CYCLE_COUNT",
+    "technology": "POWER_SUPPLY_TECHNOLOGY",
+    "present": "POWER_SUPPLY_PRESENT",
+    "manufacturer": "POWER_SUPPLY_MANUFACTURER",
+    "model_name": "POWER_SUPPLY_MODEL_NAME",
+    "serial_number": "POWER_SUPPLY_SERIAL_NUMBER",
+    "temp": "POWER_SUPPLY_TEMP",
+}
 
-def pr_ac(f):
-    return("".join(readf(ac(f))).strip())
+AC_KEYS = {
+    "online": "POWER_SUPPLY_ONLINE",
+}
 
-def pr_bat(f):
-    return("".join(readf(bat(f))).strip())
+LABELS = {
+    "status": "Status",
+    "online": "Online",
+    "capacity": "Capacity",
+    "capacity_level": "Capacity level",
+    "charge_control_start_threshold": "Charge limit start",
+    "charge_control_end_threshold": "Charge limit end",
+    "charge_behaviour": "Charge behaviour",
+    "power_now": "Power now",
+    "energy_now": "Energy now",
+    "energy_full": "Full charge",
+    "energy_full_design": "Design capacity",
+    "cycle_count": "Cycle count",
+    "technology": "Chemistry",
+    "present": "Present",
+    "manufacturer": "Manufacturer",
+    "model_name": "Model",
+    "serial_number": "Serial",
+    "voltage_now": "Voltage now",
+    "temp": "Temperature",
+}
 
-def pbat(f, label=None):
+def find_ps():
+    ac = None
+    bat = None
+    try:
+        entries = os.listdir(PS)
+    except Exception:
+        entries = []
+    for n in entries:
+        type_path = f"{PS}/{n}/type"
+        try:
+            t = open(type_path).read().strip()
+        except Exception:
+            continue
+        if t == "Battery" and bat is None:
+            bat = n
+        if t in AC_TYPES and ac is None:
+            ac = n
+    if ac is None:
+        ac = "AC"
+    if bat is None:
+        bat = "BAT0"
+    return ac, bat
+
+def read_uevent(dev):
+    path = f"{PS}/{dev}/uevent"
+    data = {}
+    try:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if "=" in line:
+                    k, v = line.split("=", 1)
+                    data[k] = v
+    except Exception:
+        pass
+    return data
+
+def ac_path(field):
+    return f"{PS}/{AC_NAME}/{field}"
+
+def bat_path(field):
+    return f"{PS}/{BAT_NAME}/{field}"
+
+def read_text(path):
+    try:
+        with open(path) as f:
+            return f.read().strip()
+    except Exception:
+        return "n/a"
+
+def label_for(key, override=None):
+    if override is not None:
+        return override
+    if key in LABELS:
+        return LABELS[key]
+    return key.replace("_", " ").title()
+
+def fmt_temp(raw):
+    try:
+        v = int(raw)
+    except Exception:
+        return raw
+    if v > 10000:
+        return f"{v / 1000:.1f} °C"
+    if v > 200:
+        return f"{v / 10:.1f} °C"
+    return f"{v:.1f} °C"
+
+def fmt(key, s):
+    if key == "online" or key == "present":
+        val = str(s).strip().lower()
+        if val in ("1", "yes", "on", "true"):
+            return "yes"
+        if val in ("0", "no", "off", "false"):
+            return "no"
+
+    try:
+        v = int(s)
+    except Exception:
+        if key == "temp":
+            return fmt_temp(s)
+        return s
+    if key == "temp":
+        return fmt_temp(v)
+    if key in ("power_now",):
+        return f"{v / 1e6:.2f} W"
+    if key in ("energy_now", "energy_full", "energy_full_design"):
+        return f"{v / 1e6:.2f} Wh"
+    if key in ("current_now",):
+        return f"{v / 1e6:.2f} A"
+    if key in ("charge_now", "charge_full", "charge_full_design"):
+        return f"{v / 1e6:.2f} Ah"
+    if key in ("voltage_now",):
+        return f"{v / 1e6:.2f} V"
+    if key in ("capacity", "charge_control_start_threshold", "charge_control_end_threshold"):
+        return f"{v:.0f} %"
+    return s
+
+def pr_from_snap(field, snap, keymap, path_fn):
+    k = keymap.get(field)
+    if k is not None and k in snap:
+        return snap[k]
+    path = path_fn(field)
+    return read_text(path)
+
+def pr_ac(field):
+    return pr_from_snap(field, AC_SNAP, AC_KEYS, ac_path)
+
+def pr_bat(field):
+    return pr_from_snap(field, BAT_SNAP, BAT_KEYS, bat_path)
+
+def print_line(label, value):
     padn = 30
-    if label is None:
-        label = f
-    padsp = " " * (padn - len(label) )
-    print(padsp + label + ":", pr_bat(f))
+    spaces = " " * max(0, padn - len(label))
+    print(f"{spaces}{label}:", value)
 
-def pac(f, label=None):
-    padn = 30
-    if label is None:
-        label = f
-    label = "AC/" + label
-    padsp = " " * (padn - len(label) )
-    print(padsp + label + ":", pr_ac(f))
+def print_bat(field, label=None):
+    lbl = label_for(field, label)
+    val = pr_bat(field)
+    out = fmt(field, val)
+    print_line(lbl, out)
 
-print(" " * 25 + "BATTERY / AC")
-pbat("status")
-pac("online")
-pbat("capacity")
-pbat("capacity_level")
-pbat("charge_control_start_threshold")
-pbat("charge_control_end_threshold")
-pbat("power_now")
-pbat("energy_now")
-pbat("energy_full")
-pbat("energy_full_design")
-pbat("cycle_count")
-pbat("charge_behaviour")
-print("\n")
-pbat("technology")
-pbat("present")
-pbat("manufacturer")
-pbat("model_name")
-pbat("serial_number")
+def print_ac(field, label=None):
+    base = label_for(field, label)
+    lbl = f"AC/{base}"
+    val = pr_ac(field)
+    out = fmt(field, val)
+    print_line(lbl, out)
 
+def get_float(s):
+    try:
+        return float(s)
+    except Exception:
+        return None
+
+def watts_from_snap(snap):
+    try:
+        p = int(snap.get("POWER_SUPPLY_POWER_NOW", "0"))
+        if p != 0:
+            return abs(p) / 1e6
+    except Exception:
+        pass
+    try:
+        v = int(snap.get("POWER_SUPPLY_VOLTAGE_NOW", "0")) / 1e6
+        i = abs(int(snap.get("POWER_SUPPLY_CURRENT_NOW", "0"))) / 1e6
+        if v > 0 and i > 0:
+            return v * i
+    except Exception:
+        pass
+    return None
+
+def est_pct():
+    try:
+        now = int(BAT_SNAP.get("POWER_SUPPLY_ENERGY_NOW", "0"))
+        full = int(BAT_SNAP.get("POWER_SUPPLY_ENERGY_FULL", "0"))
+        if full > 0:
+            return round(100 * now / full, 1)
+    except Exception:
+        pass
+    try:
+        now = int(BAT_SNAP.get("POWER_SUPPLY_CHARGE_NOW", "0"))
+        full = int(BAT_SNAP.get("POWER_SUPPLY_CHARGE_FULL", "0"))
+        if full > 0:
+            return round(100 * now / full, 1)
+    except Exception:
+        pass
+    try:
+        cap = float(BAT_SNAP.get("POWER_SUPPLY_CAPACITY"))
+        return cap
+    except Exception:
+        return None
+
+def est_pct_design():
+    try:
+        now = int(BAT_SNAP.get("POWER_SUPPLY_ENERGY_NOW", "0"))
+        design = int(BAT_SNAP.get("POWER_SUPPLY_ENERGY_FULL_DESIGN", "0"))
+        if design > 0:
+            return round(100 * now / design, 1)
+    except Exception:
+        pass
+    try:
+        now = int(BAT_SNAP.get("POWER_SUPPLY_CHARGE_NOW", "0"))
+        design = int(BAT_SNAP.get("POWER_SUPPLY_CHARGE_FULL_DESIGN", "0"))
+        if design > 0:
+            return round(100 * now / design, 1)
+    except Exception:
+        pass
+    try:
+        cap = float(BAT_SNAP.get("POWER_SUPPLY_CAPACITY"))
+        full = int(BAT_SNAP.get("POWER_SUPPLY_ENERGY_FULL", "0"))
+        design = int(BAT_SNAP.get("POWER_SUPPLY_ENERGY_FULL_DESIGN", "0"))
+        if design > 0:
+            return round(cap * (full / design), 1)
+    except Exception:
+        return None
+    return None
+
+def eta():
+    status = pr_bat("status")
+    if status not in ("Charging", "Discharging"):
+        return "n/a"
+    p_w = watts_from_snap(BAT_SNAP)
+    if p_w is not None and p_w > 0:
+        try:
+            now_wh = int(BAT_SNAP.get("POWER_SUPPLY_ENERGY_NOW", "0")) / 1e6
+            full_wh = int(BAT_SNAP.get("POWER_SUPPLY_ENERGY_FULL", "0")) / 1e6
+            if status == "Discharging" and now_wh > 0:
+                h = now_wh / p_w
+                return f"{h:.1f}h"
+            if status == "Charging":
+                rem = full_wh - now_wh
+                if rem > 0:
+                    h = rem / p_w
+                    return f"{h:.1f}h"
+        except Exception:
+            pass
+    try:
+        i_a = abs(int(BAT_SNAP.get("POWER_SUPPLY_CURRENT_NOW", "0"))) / 1e6
+        now_ah = int(BAT_SNAP.get("POWER_SUPPLY_CHARGE_NOW", "0")) / 1e6
+        full_ah = int(BAT_SNAP.get("POWER_SUPPLY_CHARGE_FULL", "0")) / 1e6
+        if i_a > 0:
+            if status == "Discharging" and now_ah > 0:
+                h = now_ah / i_a
+                return f"{h:.1f}h"
+            if status == "Charging":
+                rem = full_ah - now_ah
+                if rem > 0:
+                    h = rem / i_a
+                    return f"{h:.1f}h"
+    except Exception:
+        pass
+    return "n/a"
+
+def health():
+    try:
+        full = int(BAT_SNAP.get("POWER_SUPPLY_ENERGY_FULL", "0"))
+        design = int(BAT_SNAP.get("POWER_SUPPLY_ENERGY_FULL_DESIGN", "0"))
+        if design > 0:
+            pct = 100 * full / design
+            return f"{pct:.1f}%"
+    except Exception:
+        pass
+    try:
+        full = int(BAT_SNAP.get("POWER_SUPPLY_CHARGE_FULL", "0"))
+        design = int(BAT_SNAP.get("POWER_SUPPLY_CHARGE_FULL_DESIGN", "0"))
+        if design > 0:
+            pct = 100 * full / design
+            return f"{pct:.1f}%"
+    except Exception:
+        return "n/a"
+    return "n/a"
+
+def main():
+    print(" " * 25 + "BATTERY / AC")
+    print()
+    print_line("Using", f"AC={AC_NAME} BAT={BAT_NAME}")
+    print()
+
+    # State
+    print_bat("status")
+    print_ac("online")
+    # print_bat("capacity")
+    # print_bat("capacity_level")
+    print_bat("voltage_now")
+    if pr_bat("temp") != "n/a":
+        print_bat("temp")
+    print()
+
+    # Estimates
+    pct = est_pct()
+    if pct is not None:
+        print_line("Estimated % (current full)", f"{pct}%")
+    else:
+        print_line("Estimated % (current full)", "n/a")
+    pct_d = est_pct_design()
+    if pct_d is not None:
+        print_line("Estimated % (design)", f"{pct_d}%")
+    else:
+        print_line("Estimated % (design)", "n/a")
+    print_line("ETA", eta())
+    print_line("Health", health())
+    print()
+
+    # Limits and policy
+    print_bat("charge_control_start_threshold")
+    print_bat("charge_control_end_threshold")
+    print_bat("charge_behaviour")
+    print()
+
+    # Statistics
+    print_bat("power_now")
+    print_bat("energy_now")
+    print_bat("energy_full")
+    print_bat("energy_full_design")
+    print_bat("cycle_count")
+    print()
+
+    # Identity
+    print_bat("technology")
+    print_bat("present")
+    print_bat("manufacturer")
+    print_bat("model_name")
+    print_bat("serial_number")
+
+# Resolve devices and snapshot once per run
+AC_NAME, BAT_NAME = find_ps()
+AC_SNAP = read_uevent(AC_NAME)
+BAT_SNAP = read_uevent(BAT_NAME)
+
+if __name__ == "__main__":
+    main()
