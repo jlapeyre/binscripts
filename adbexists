@@ -1,0 +1,20 @@
+#!/bin/sh
+
+# adbexists: ensure target NAME exists in targets file
+#
+# Looks up the nickname (NAME) in your targets file and exits with an error
+# if it is not found. This is a fast-fail guard used by other scripts so they can
+# assume the name is valid. The targets file is "${ADB_TARGETS:-$HOME/.config/adb/targets}".
+# Each line should start with the nickname, followed by fields like "wifi=host:port" and "usb=SERIAL".
+
+file="${ADB_TARGETS:-$HOME/.config/adb/targets}"
+name="$1"
+awk -v n="$name" '
+  $1==n { f=1 }
+  END {
+    if (!f) {
+      print "unknown target: " n > "/dev/stderr"
+      exit 2
+    }
+  }
+' "$file"

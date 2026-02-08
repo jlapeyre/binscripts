@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# adbconnect: connect NAME over Wi‑Fi using targets config
+#
+# Looks up NAME’s Wi‑Fi host:port and runs "adb connect". Useful when you
+# want to establish a connection first, then run other adb commands manually or
+# via adbs. Errors clearly if NAME is unknown.
+
+name="$1"
+adbexists "$name" || exit $?
+tgt="$(adbget "$name" wifi)"
+exec adb connect "$tgt"

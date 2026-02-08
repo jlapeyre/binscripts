@@ -1,0 +1,20 @@
+#!/bin/sh
+
+# adbmode: explicit usb/wifi or auto (usb if up else wifi) for NAME
+#
+# If you pass usb or wifi, it simply echoes that mode. If no mode is given,
+# it prefers usb when adbisup reports the USB device is ready; otherwise it falls
+# back to wifi. Exits 2 if NAME is unknown. Prints the chosen mode on stdout.
+
+name="$1"
+req="$2"
+adbexists "$name" || exit $?
+if [ "$req" = usb ] || [ "$req" = wifi ]; then
+  echo "$req"
+  exit 0
+fi
+if adbisup "$name"; then
+  echo usb
+else
+  echo wifi
+fi

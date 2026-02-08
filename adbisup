@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# adbisup: check if USB target for NAME is connected and authorized
+#
+# Resolves NAME’s usb serial and asks adb for its state. Returns 0 if the
+# device is present and in "device" state (authorized/online). Returns 1 if the
+# usb entry is missing or the device is absent/offline/unauthorized. Returns 2
+# if NAME is unknown. Produces no output on success.
+
+name="$1"
+adbexists "$name" || exit $?
+usb="$(adbget "$name" usb 2>/dev/null || true)"
+[ -n "$usb" ] || exit 1
+adb -s "$usb" get-state 2>/dev/null | grep -qx device

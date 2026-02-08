@@ -1,0 +1,21 @@
+#!/bin/sh
+
+# adbget: print selector for NAME and MODE (wifi|usb)
+#
+# Given a nickname and an optional mode, prints the value needed for -s:
+# host:port for wifi or the USB serial for usb. Exits 2 if NAME is unknown and
+# 1 if the requested MODE is not present on that line. Targets file is
+# "${ADB_TARGETS:-$HOME/.config/adb/targets}" with lines like:
+#   onn wifi=onntv:33239 usb=R3CR1234567
+
+name="$1"
+mode="${2:-wifi}"
+file="${ADB_TARGETS:-$HOME/.config/adb/targets}"
+adbexists "$name" || exit $?
+awk -v n="$name" -v m="$mode" '
+  $1==n {
+    for (i=2; i<=NF; i++)
+      if ($i ~ m"=") { sub(/.*=/, "", $i); print $i; f=1; exit }
+  }
+  END { exit !f }
+' "$file"

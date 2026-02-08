@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# adbs: run adb against NAME, preferring USB when present
+#
+# Resolves a device nickname to either its USB serial (preferred when the
+# device is connected/authorized) or its Wi‑Fi host:port (and auto-runs "adb connect"
+# when choosing Wi‑Fi). You can force a mode by supplying "usb" or "wifi" after NAME.
+# All remaining arguments are passed to adb. Exits non-zero on failure; prints a clear
+# error if NAME is unknown or the selector cannot be resolved.
+
+name="$1"
+req="$2"
+adbexists "$name" || exit $?
+mode="$(adbmode "$name" "$req")"
+if [ "$req" = usb ] || [ "$req" = wifi ]; then
+  shift 2
+else
+  shift 1
+fi
+if [ "$mode" = usb ]; then
+  sel="$(adbget "$name" usb)"
+else
+  sel="$(adbget "$name" wifi)"
+  adb connect "$sel" >/dev/null 2>&1
+fi
+[ -n "$sel" ] || { echo "adbs: no target for $name ($mode)" >&2; exit 1; }
+exec adb -s "$sel" "$@"
