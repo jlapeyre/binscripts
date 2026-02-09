@@ -1,12 +1,22 @@
 #!/bin/sh
 
-# View kernel messages in color, excluding audit logs, using less.
-# -T            : Show human-readable timestamps
-# --color=always: Force colored output
-# grep -v "audit": Filter out audit messages (which can be noisy)
-# less -R       : Preserve raw color codes
-# +G            : Start less at the end of the output
+# Previously, I used dmesg to get these log lines. But the time stamp was often incorrect.
+# This is a longstanding known issue.
 
-dmesg -T --color=always \
-    | grep -v "audit" \
-    | less -R +G
+# Kernel messages (current boot) with local wall-clock timestamps to the second,
+# dmesg-like coloring (timestamp green, tag yellow, errors red), and audit filtered out.
+LC_TIME=C journalctl -k -b -o short-unix --no-hostname --no-pager \
+| perl -MPOSIX=strftime -ne '
+    # Expect: "<epoch[.frac]> [optional prefix:] message"
+    if (/^(\d+)(?:\.\d+)?\s+(?:\S+:\s*)?(.*)/) {
+        my ($epoch, $msg) = ($1, $2);
+        next if $msg =~ /audit/;                                # drop noisy audit lines
+        my $ts = strftime("[%a %b %d %T %Y] ", localtime($epoch));  # [Thu Feb 19 16:39:30 2026]
+        my $tag = "";                                           # extract optional leading tag like "PM:" or "usb 6-1:"
+        if ($msg =~ s/^([^:]+:\s*)//) { $tag = $1 }
+        my ($G,$Y,$R,$Z) = ("\e[32m","\e[33m","\e[31m","\e[0m"); # colors: green, yellow, red, reset
+        my $body = ($msg =~ /(fail|error)/i) ? "$R$msg$Z" : $msg;
+        print $G,$ts,$Z, ($tag ? $Y.$tag.$Z : ""), $body, "\n";
+    }
+' \
+| less -R +G
