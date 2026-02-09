@@ -2,4 +2,4 @@
 
 # View output of ls in a pager
 
-ls -ltrh --color=always "$@" | less -R +G
+lsd -ltrh --color=always "$@" | less -R +G
