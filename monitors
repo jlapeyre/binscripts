@@ -1,0 +1,93 @@
+#!/bin/sh
+# usage: monitors [--dry-run|-n] [--external-only|-x] [--verbose|-v]
+#
+# Detects connected displays via xrandr (eDP, HDMI, DP).
+# Default: keep laptop panel (eDP) on and use externals if present:
+#   - If HDMI+DP: DP left of HDMI, HDMI primary; eDP right of HDMI.
+#   - If one external: make it primary; eDP right of it.
+#   - If no externals: use eDP as primary.
+# --external-only/-x: turn eDP off and use only external monitor(s);
+#   if no external is found, keep eDP on as primary.
+# --dry-run/-n: print the xrandr command instead of executing it.
+# --verbose/-v: print a compact table of outputs and their state.
+
+VERBOSE=0
+DRYRUN=0
+EXTONLY=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -n|--dry-run) DRYRUN=1;;
+    -x|--external-only) EXTONLY=1;;
+    -v|--verbose) VERBOSE=1;;    
+    *) break;;
+  esac
+  shift
+done
+
+XR="$(xrandr --query)"
+edp=$(printf "%s\n" "$XR" | awk '/^eDP[^ ]* connected/{print $1; exit}')
+hdmi=$(printf "%s\n" "$XR" | awk '/^HDMI[^ ]* connected/{print $1; exit}')
+dp=$(printf "%s\n" "$XR" | awk '/^(DP|DisplayPort)[^ ]* connected/{print $1; exit}')
+
+if [ "$VERBOSE" -eq 1 ]; then
+printf "%s\n" "$XR" | awk '
+  BEGIN {
+    printf "%-10s Connected Enabled\n", "Output"
+  }
+  function en(s) {
+    return s ~ /[0-9]+x[0-9]+\+[0-9]+\+[0-9]+/
+  }
+  /^(eDP|HDMI|DP|DisplayPort)/ {
+    c = ($2 == "connected" ? "Y" : "N")
+    e = (en($0) ? "Y" : "N")
+    printf "%-14s  %s    %s\n", $1, c, e
+  }
+'
+fi
+
+set --
+if [ "$EXTONLY" -eq 1 ]; then
+  if [ -n "$dp" ] && [ -n "$hdmi" ]; then
+    set -- "$@" --output "$dp" --auto --left-of "$hdmi" \
+                   --output "$hdmi" --auto --primary
+    [ -n "$edp" ] && set -- "$@" --output "$edp" --off
+  elif [ -n "$hdmi" ]; then
+    set -- "$@" --output "$hdmi" --auto --primary
+    [ -n "$edp" ] && set -- "$@" --output "$edp" --off
+  elif [ -n "$dp" ]; then
+    set -- "$@" --output "$dp" --auto --primary
+    [ -n "$edp" ] && set -- "$@" --output "$edp" --off
+  else
+    if [ -n "$edp" ]; then
+      set -- "$@" --output "$edp" --auto --primary
+    else
+      echo "No displays detected; nothing to do."
+      exit 1
+    fi
+  fi
+else
+  if [ -n "$dp" ] && [ -n "$hdmi" ]; then
+    set -- "$@" --output "$dp" --auto --left-of "$hdmi" \
+                   --output "$hdmi" --auto --primary
+    [ -n "$edp" ] && set -- "$@" --output "$edp" --auto --right-of "$hdmi"
+  elif [ -n "$hdmi" ]; then
+    set -- "$@" --output "$hdmi" --auto --primary
+    [ -n "$edp" ] && set -- "$@" --output "$edp" --auto --right-of "$hdmi"
+  elif [ -n "$dp" ]; then
+    set -- "$@" --output "$dp" --auto --primary
+    [ -n "$edp" ] && set -- "$@" --output "$edp" --auto --right-of "$dp"
+  else
+    if [ -n "$edp" ]; then
+      set -- "$@" --output "$edp" --auto --primary
+    else
+      echo "No displays detected; nothing to do."
+      exit 1
+    fi
+  fi
+fi
+
+if [ "$DRYRUN" -eq 1 ]; then
+  echo "xrandr $*"
+else
+  exec xrandr "$@"
+fi
