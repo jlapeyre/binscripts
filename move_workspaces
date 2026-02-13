@@ -1,0 +1,26 @@
+#!/usr/bin/env sh
+
+# Move workspaces 1,2,3 to DP output (if present)
+# Move all others to HDMI output (if present)
+# These workspaces are actually named: eg 1:ab, 2:cd, etc.
+# We have to refer to them by their names
+
+dp=$(i3-msg -t get_outputs | jq -r '[.[]|select(.active and (.name|test("^(DP|DisplayPort)"))).name][0]')
+hdmi=$(i3-msg -t get_outputs | jq -r '([.[]|select(.active and (.name|test("^HDMI"))).name] + [.[]|select(.active and .primary).name] + [.[]|select(.active).name])[0]')
+
+# echo dp $dp
+# echo hdmi $hdmi
+
+# move 1,2,3 to DP, if present, by resolving to their names (e.g., "1:wbrs", "2:cal")
+for n in 1 2 3; do
+  ws=$(i3-msg -t get_workspaces | jq -r --argjson n "$n" '.[]|select(.num==$n)|.name')
+  [ -n "$ws" ] && i3-msg "workspace \"$ws\"; move workspace to output \"$dp\""
+done
+
+# Move the remaining workspaces to HDMI (only if both exist) again
+# resolving to their names.
+i3-msg -t get_workspaces \
+| jq -r '.[] | select(.num!=1 and .num!=2 and .num!=3) | .name' \
+| while IFS= read -r ws; do
+  i3-msg "workspace \"$ws\"; move workspace to output \"$hdmi\"" >/dev/null
+done
