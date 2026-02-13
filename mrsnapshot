@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# rsnapshot wrapper with time-based promotions and sudo handling.
+# - Always runs alpha.
+# - Promotes to beta/gamma/delta if level.0 is older than the configured age.
+# - Only promotes to a level if the lower level has a full set per retain counts.
+# - Pass any rsnapshot flags (e.g., -t, -v, -c /path/to/rsnapshot.conf) via "$@".
+# - Exits if the backup drive is not mounted.
+
+set -o errexit -o pipefail -o nounset
+
+# ---- Paths ----
+MOUNTPOINT="/media/seagate5T3"                  # Where the external drive mounts
+SNAPSHOT_ROOT="/media/seagate5T3/backups/kurt"    # Contains alpha.0, beta.0, etc.
+RSNAPSHOT_BIN="/usr/bin/rsnapshot"        # Full path helps with sudoers rules
+
+# ---- Schedule (tunable) ----
+BETA_DAYS=1
+GAMMA_DAYS=7
+DELTA_DAYS=30
+
+# ---- Retain counts (match your rsnapshot.conf) ----
+RETAIN_ALPHA=6
+RETAIN_BETA=7
+RETAIN_GAMMA=4
+# RETAIN_DELTA=3   # Not used for promotion checks (there’s no higher level)
+
+# ---- sudo handling ----
+if [[ $EUID -eq 0 ]]; then SUDO=""; else SUDO="sudo"; $SUDO -v || true; fi
+
+# ---- Preconditions ----
+if ! mountpoint -q "$MOUNTPOINT"; then
+  echo "Backup drive not mounted at: $MOUNTPOINT" >&2
+  exit 1
+fi
+if [[ ! -d "$SNAPSHOT_ROOT" ]]; then
+  echo "Snapshot root not found: $SNAPSHOT_ROOT" >&2
+  exit 1
+fi
+
+# ---- Helpers ----
+DAY=86400
+BETA_MAX=$((BETA_DAYS*DAY))
+GAMMA_MAX=$((GAMMA_DAYS*DAY))
+DELTA_MAX=$((DELTA_DAYS*DAY))
+now=$(date +%s)
+
+age() { stat -c %Y "$SNAPSHOT_ROOT/$1.0" 2>/dev/null || echo 0; }
+count_level() { compgen -G "$SNAPSHOT_ROOT/$1".[0-9]* 2>/dev/null | wc -l; }
+
+have_full_for_beta()  { (( $(count_level alpha) >= RETAIN_ALPHA )); }
+have_full_for_gamma() { (( $(count_level beta)  >= RETAIN_BETA  )); }
+have_full_for_delta() { (( $(count_level gamma) >= RETAIN_GAMMA )); }
+
+# ---- Decide which promotion is due (by age), then ensure prerequisites ----
+due=""
+if   (( now - $(age delta) > DELTA_MAX )); then due="delta"
+elif (( now - $(age gamma) > GAMMA_MAX )); then due="gamma"
+elif (( now - $(age beta)  > BETA_MAX  )); then due="beta"
+fi
+
+# Downgrade if the lower-level chain isn’t complete yet
+if [[ "$due" == "delta" ]] && ! have_full_for_delta; then due="gamma"; fi
+if [[ "$due" == "gamma" ]] && ! have_full_for_gamma; then due="beta";  fi
+if [[ "$due" == "beta"  ]] && ! have_full_for_beta;  then due="";      fi
+
+# ---- Run alpha, then promote up to the highest allowed level this run ----
+"$SUDO" "$RSNAPSHOT_BIN" "$@" alpha
+
+case "${due:-}" in
+  beta)
+    "$SUDO" "$RSNAPSHOT_BIN" "$@" beta
+    ;;
+  gamma)
+    "$SUDO" "$RSNAPSHOT_BIN" "$@" beta
+    "$SUDO" "$RSNAPSHOT_BIN" "$@" gamma
+    ;;
+  delta)
+    "$SUDO" "$RSNAPSHOT_BIN" "$@" beta
+    "$SUDO" "$RSNAPSHOT_BIN" "$@" gamma
+    "$SUDO" "$RSNAPSHOT_BIN" "$@" delta
+    ;;
+  *) : ;;  # nothing due beyond alpha
+esac
