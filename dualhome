@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# The script "monitors" configures monitors correctly
+# by detecting which are present.
+# This is of limited use.
 # Two screens
 # Two external monitors ON
 # Laptop screen OFF
