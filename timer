@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+# Timer. With desktop notification
+
+if [ -z "$1" ]; then
+  echo "Usage: $0 DURATION [DURATION ...]  (e.g., 15m, 27m, 2h, 90s)"
+  exit 1
+fi
+for d in "$@"; do
+  sleep "$d" && notify-send "Timer" "$d done" && canberra-gtk-play -i alarm-clock-elapsed 2>/dev/null
+done
+
