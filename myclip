@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# myclip — Save rich clipboard contents into a self-contained folder
+# Usage: myclip NAME
+# - Creates/enters directory NAME.
+# - Reads text/html from the X11 clipboard (xclip) into NAME.raw.html.
+# - Strips data-URI <img> and inline <svg>; keeps alt/aria-label text; writes NAME.html.
+# - Also saves plain text as NAME.txt (if available).
+# - Optionally pretty-prints HTML to NAME.pretty.html via tidy or xmllint.
+# - Optionally converts to NAME.org, NAME.md, and NAME.media.md (with media/) via pandoc.
+# Requirements: xclip (required); tidy/xmllint and pandoc (optional). Uses set -euo pipefail.
+
+PROG=${0##*/}
+
+case "${1-}" in
+  -h|--help)
+    cat <<EOF
+$PROG — Save rich clipboard contents into a self-contained folder
+
+Usage: $PROG NAME
+- Creates/enters NAME; saves clipboard HTML to NAME.raw.html and prunes data-URI images/SVGs into NAME.html.
+- Also saves plain text to NAME.txt (if available).
+- Optionally pretty-prints to NAME.pretty.html (tidy/xmllint).
+- Optionally converts to NAME.org, NAME.md, NAME.media.md (pandoc; media/ extracted).
+
+Requirements: xclip (required); tidy or xmllint and pandoc (optional).
+EOF
+    exit 0
+    ;;
+  "" )
+    echo "Usage: $PROG NAME. Try '$PROG --help' for help." >&2
+    exit 2
+    ;;
+  -*)
+    echo "Unknown option: $1. Try '$PROG --help' for help." >&2
+    exit 2
+    ;;
+esac
+
+BASE=${1:?Usage: myclip NAME}
+DIR="$BASE"
+
+mkdir -p "$DIR"
+cd "$DIR"
+
+# Grab highest-fidelity HTML from clipboard (X11)
+if ! xclip -selection clipboard -t text/html -o > "$BASE.raw.html"; then
+  echo "No text/html on clipboard; saving plain text only." >&2
+  xclip -selection clipboard -o > "$BASE.txt"
+  exit 0
+fi
+
+perl -0777 -pe 's{<img[^>]*\bsrc="data:[^"]+"[^>]*\b(?:alt|aria-label)="([^"]+)"[^>]*>}{$1}gmi; s{<img[^>]*\bsrc="data:[^"]+"[^>]*>}{}gmi; s{<svg\b.*?</svg>}{}gmis' "$BASE.raw.html" > "$BASE.html"
+
+# Also save plain text (if available)
+xclip -selection clipboard -o > "$BASE.txt" || true
+
+# Pretty HTML if you have tidy or xmllint (optional)
+if command -v tidy >/dev/null 2>&1; then
+  tidy -quiet -indent -wrap 0 -ashtml -utf8 --preserve-entities yes --drop-empty-elements no "$BASE.html" > "$BASE.pretty.html" || true
+elif command -v xmllint >/dev/null 2>&1; then
+  xmllint --html --recover --format "$BASE.html" > "$BASE.pretty.html" || true
+fi
+
+# Conversions if pandoc is available (optional)
+if command -v pandoc >/dev/null 2>&1; then
+  pandoc -f html -t org --wrap=none "$BASE.html" > "$BASE.org"
+  pandoc -f html -t gfm-raw_html --wrap=none "$BASE.html" > "$BASE.md"
+  pandoc -f html -t gfm --wrap=none --extract-media=media "$BASE.html" > "$BASE.media.md"
+fi
+
+echo "Saved to: $(pwd)"

@@ -1,0 +1,35 @@
+#/bin/sh
+
+# Lists only bound cards
+
+# card0: Generic
+# /sys/devices/pci0000:00/0000:00:08.1/0000:c4:00.1
+# card1: Generic_1
+# /sys/devices/pci0000:00/0000:00:08.1/0000:c4:00.6
+# card2: acp63
+# /sys/devices/pci0000:00/0000:00:08.1/0000:c4:00.5/acp_ps_mach
+# card3: C920
+# /sys/devices/pci0000:00/0000:00:08.1/0000:c4:00.3/usb1/1-2/1-2.2/1-2.2:1.2
+
+# dir= carddir id=Generic  dev=0000:c4:00.1  bus=drivers  driver=snd_hda_intel  bound
+# dir= carddir id=Generic_1  dev=0000:c4:00.6  bus=drivers  driver=snd_hda_intel  bound
+# dir= carddir id=acp63  dev=acp_ps_mach  bus=drivers  driver=acp_ps_mach  bound
+# dir= carddir id=C920  dev=1-2.2:1.2  bus=drivers  driver=snd-usb-audio  bound
+
+# Print info for each card including if it is bound
+for c in /sys/class/sound/card[0-9]*; do
+  carddir=$(basename "$c")
+  cardid=$(cat "$c/id")
+  dev=$(readlink -f "$c/device")
+  drvlink="$dev/driver"
+  if [ -L "$drvlink" ]; then
+    drv=$(basename "$(readlink -f "$drvlink")")
+    bus=$(basename "$(dirname "$(readlink -f "$drvlink")")")
+    status="bound"
+  else
+    drv="-"
+    bus="-"
+    status="unbound"
+  fi
+  echo "dir= $carddir id=$cardid  dev=$(basename "$dev")  bus=$bus  driver=$drv  $status"
+done

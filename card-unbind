@@ -1,0 +1,47 @@
+#!/bin/sh
+
+# card0: Generic
+# /sys/devices/pci0000:00/0000:00:08.1/0000:c4:00.1
+# card1: Generic_1
+# /sys/devices/pci0000:00/0000:00:08.1/0000:c4:00.6
+# card2: acp63
+# /sys/devices/pci0000:00/0000:00:08.1/0000:c4:00.5/acp_ps_mach
+# card3: C920
+# /sys/devices/pci0000:00/0000:00:08.1/0000:c4:00.3/usb1/1-2/1-2.2/1-2.2:1.2
+
+# dir= carddir id=Generic  dev=0000:c4:00.1  bus=drivers  driver=snd_hda_intel  bound
+# dir= carddir id=Generic_1  dev=0000:c4:00.6  bus=drivers  driver=snd_hda_intel  bound
+# dir= carddir id=acp63  dev=acp_ps_mach  bus=drivers  driver=acp_ps_mach  bound
+# dir= carddir id=C920  dev=1-2.2:1.2  bus=drivers  driver=snd-usb-audio  bound
+
+
+# Usage: sudo card-unbind <card_id>   # e.g., C920, acp63, Generic_1, Generic
+id="$1"
+[ -n "$id" ] || { echo "usage: $0 <card_id>"; exit 2; }
+
+for c in /sys/class/sound/card[0-9]*; do
+  [ -e "$c" ] || continue
+  cid=$(cat "$c/id" 2>/dev/null) || continue
+  [ "$cid" = "$id" ] || continue
+
+  dev=$(readlink -f "$c/device") || exit 1
+  devid=$(basename "$dev")
+  subsys=$(basename "$(readlink -f "$dev/subsystem")" 2>/dev/null)
+
+  if [ -L "$dev/driver" ]; then
+    drvpath=$(readlink -f "$dev/driver")
+    drvname=$(basename "$drvpath")
+    echo "$(basename "$c"): $cid  dev=$devid  bus=$subsys  driver=$drvname  status=bound"
+
+    echo "echo $devid | tee $drvpath/unbind >/dev/null"
+
+    echo "$devid" | tee "$drvpath/unbind" >/dev/null || { echo "unbind failed"; exit 4; }
+    [ -L "$dev/driver" ] && echo "status: still bound" || echo "status: unbound"
+  else
+    echo "$(basename "$c"): $cid  dev=$devid  bus=$subsys  status=unbound (nothing to do)"
+  fi
+  exit 0
+done
+
+echo "card id '$id' not found under /sys/class/sound" >&2
+exit 1

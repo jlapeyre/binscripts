@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+"""
+Watch Android charging current over time via adb (USB or Wi‑Fi).
+"""
+
+import subprocess, time, datetime, argparse, sys
+
+SYSFS_PATH = "/sys/class/power_supply/battery/current_now"
+
+
+def list_devices():
+    try:
+        out = subprocess.check_output(["adb", "devices"], text=True).strip().splitlines()
+    except Exception:
+        return []
+    lines = out[1:]  # skip header
+    devs = []
+    for l in lines:
+        if not l.strip():
+            continue
+        parts = l.split()
+        if len(parts) >= 2 and parts[1] == "device":
+            devs.append(parts[0])
+    return devs
+
+
+def choose_device(cli_serial):
+    if cli_serial:
+        return cli_serial
+    devs = list_devices()
+    if not devs:
+        sys.stderr.write("No adb devices found.\n")
+        sys.exit(1)
+    return devs[0]
+
+
+def read_current(serial):
+    try:
+        out = subprocess.check_output(
+            ["adb", "-s", serial, "shell", "cat", SYSFS_PATH],
+            stderr=subprocess.STDOUT,
+            text=True,
+            timeout=3,
+        ).strip()
+        return out, None
+    except subprocess.CalledProcessError as e:
+        msg = e.output.strip().lower()
+        if "no devices/emulators found" in msg:
+            return None, "no device / not authorized"
+        return None, "adb error"
+    except subprocess.TimeoutExpired:
+        return None, "adb timeout"
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="charging_current",
+        description=(
+            "Watch Android charging current over time via adb.\n\n"
+            "Examples:\n"
+            "  charging_current              # use first adb device\n"
+            "  charging_current -s SERIAL    # use specific adb serial/IP\n"
+            "  charging_current | tee -a current.log\n\n"
+            "Notes:\n"
+            "  - On errors (no device / unauthorized / timeout), it prints 0 mA with a note\n"
+            "    instead of exiting, so you can wiggle-test flaky cables and watch drops."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "-s",
+        metavar="SERIAL",
+        help=(
+            "adb device/serial to use (same as `adb -s`); "
+            "if omitted, use the first device from `adb devices`"
+        ),
+    )
+    args = parser.parse_args()
+
+    serial = choose_device(args.s)
+    name = ""
+    try: name = subprocess.check_output(["adb","-s",serial,"shell","getprop","ro.product.model"], text=True, timeout=2).strip()
+    except Exception: pass
+    sys.stderr.write(f"Using adb device: {serial}{f' ({name})' if name else ''}\n")
+
+    while True:
+        raw, err = read_current(serial)
+        ts = datetime.datetime.now().time().strftime("%H:%M:%S")
+
+        if err:
+            print(f"{ts}  0 mA (0 µA)  [{err}]", flush=True)
+        else:
+            try:
+                ua = int(raw)
+                ma = ua / 1000.0
+                print(f"{ts}  {ma:.0f} mA ({ua} µA)", flush=True)
+            except ValueError:
+                print(f"{ts}  0 mA (0 µA)  [unexpected output: {raw!r}]", flush=True)
+
+        time.sleep(1)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,43 @@
+#!/bin/sh
+
+# Usage: sudo card-bind <card_id>   # e.g., Generic | Generic_1 | C920
+
+# Generic
+# sudo sh -c 'echo 0000:c4:00.1 > /sys/bus/pci/drivers/snd_hda_intel/bind'
+
+# Generic_1
+# sudo sh -c 'echo 0000:c4:00.6 > /sys/bus/pci/drivers/snd_hda_intel/bind'
+
+# Rebind the C920 mic (USB)
+# sudo sh -c 'echo 1-2.2:1.2 > /sys/bus/usb/drivers/snd-usb-audio/bind'
+
+
+id="$1"
+[ -n "$id" ] || { echo "usage: $0 <card_id>"; exit 2; }
+
+# Hardcoded map: edit these for your machine
+case "$id" in
+  Generic)    BUS="pci"; DRIVER="snd_hda_intel"; DEV="0000:c4:00.1" ;;
+  Generic_1)  BUS="pci"; DRIVER="snd_hda_intel"; DEV="0000:c4:00.6" ;;
+  C920)       BUS="usb"; DRIVER="snd-usb-audio"; DEV="1-2.2:1.2" ;;
+  /) echo "unknown card id: $id"; exit 1 ;;
+esac
+
+echo "$id -> bus=$BUS driver=$DRIVER dev=$DEV"
+
+# If already bound, say so and exit
+if [ -L "/sys/bus/$BUS/drivers/$DRIVER/$DEV" ]; then
+  echo "status: already bound"
+  exit 0
+fi
+
+# Bind
+printf '%s' "$DEV" > "/sys/bus/$BUS/drivers/$DRIVER/bind" || { echo "bind failed"; exit 4; }
+
+# Verify
+if [ -L "/sys/bus/$BUS/drivers/$DRIVER/$DEV" ]; then
+  echo "status: bound"
+else
+  echo "status: still unbound"
+  exit 5
+fi

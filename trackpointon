@@ -1,0 +1,6 @@
+#!/usr/bin/sh
+
+# Turns off the red track point thing on the keyboard.
+# Unfortunatley, it also prevents selecting with the touchpad.
+
+xinput set-prop "TPPS/2 Elan TrackPoint" "Device Enabled" 0

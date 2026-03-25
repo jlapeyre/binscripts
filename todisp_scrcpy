@@ -1,0 +1,35 @@
+#!/bin/env sh
+
+# Run scrcpy to mirror the android device's screen to the laptop (or monitor) display.
+# Keyboard and mouse control the android device.
+# adb debugging must be enabled and usb cable connected. (maybe a tcip option)
+# Ctrl-c in the launching terminal to quit. (Or send signal)
+
+#!/bin/env sh
+
+# Mirror an Android device to this computer using scrcpy with sensible defaults.
+
+prog=$(basename "$0")
+if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+  cat <<EOF
+Usage: $prog [options passed to scrcpy]
+
+Description:
+  Mirror and control an Android device from this computer.
+  Defaults: --video-codec=h265 --max-size=1920 --max-fps=60 --no-audio --keyboard=uhid
+  Requirements: enable USB debugging and connect via USB, or use 'adb connect IP:PORT' for Wi‑Fi.
+  Quit with Ctrl-C in the launching terminal.
+
+Common options (forwarded to scrcpy):
+  -s SERIAL        Select device by serial/IP:PORT (e.g., -s 0123456789abcdef or -s 192.168.1.23:5555)
+  -h, --help       Show this help
+
+Examples:
+  $prog -s 0123456789abcdef
+  adb connect 192.168.1.23:5555 && $prog -s 192.168.1.23:5555
+  $prog --help
+EOF
+  exit 0
+fi
+
+exec scrcpy --video-codec=h265 --max-size=1920 --max-fps=60 --no-audio --keyboard=uhid "$@"
